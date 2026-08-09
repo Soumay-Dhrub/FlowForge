@@ -1,0 +1,33 @@
+package com.flowforge.notification;
+
+/**
+ * The event type discriminators stored in {@code notifications.event_type}.
+ *
+ * <p>Kept as constants rather than an enum because the column is a free-form {@code VARCHAR(50)} and
+ * per-user email preferences (Requirement 18.2) key off the same strings: a workflow designer can
+ * emit a custom event type from a Notification node without a schema change, while the events the
+ * platform raises itself stay spelled one way in one place.
+ */
+public final class NotificationEventTypes {
+
+    /** A task was assigned to the recipient (Requirement 17.1). */
+    public static final String TASK_ASSIGNED = "TASK_ASSIGNED";
+
+    /** A task the recipient initiated was approved (Requirement 17.2). */
+    public static final String TASK_APPROVED = "TASK_APPROVED";
+
+    /** A task the recipient initiated was rejected (Requirement 17.2). */
+    public static final String TASK_REJECTED = "TASK_REJECTED";
+
+    /** A task was escalated away from, or on to, the recipient (Requirement 17.3). */
+    public static final String TASK_ESCALATED = "TASK_ESCALATED";
+
+    /**
+     * The default for a Notification node that does not name its own event type — a message the
+     * workflow itself chose to send rather than one of the platform's lifecycle events.
+     */
+    public static final String WORKFLOW_NOTIFICATION = "WORKFLOW_NOTIFICATION";
+
+    private NotificationEventTypes() {
+    }
+}
