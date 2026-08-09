@@ -28,10 +28,19 @@ public class AuditLogService {
     /** Entity type discriminator for {@link com.flowforge.user.User} rows. */
     public static final String ENTITY_USER = "User";
 
+    /** Entity type discriminator for {@link com.flowforge.workflow.Workflow} rows. */
+    public static final String ENTITY_WORKFLOW = "Workflow";
+
+    /** Entity type discriminator for {@link com.flowforge.workflow.WorkflowVersion} rows. */
+    public static final String ENTITY_WORKFLOW_VERSION = "WorkflowVersion";
+
     public static final String ACTION_CREATE_USER = "CREATE_USER";
     public static final String ACTION_UPDATE_USER = "UPDATE_USER";
     public static final String ACTION_STATUS_CHANGE = "STATUS_CHANGE";
     public static final String ACTION_PASSWORD_RESET = "PASSWORD_RESET";
+    public static final String ACTION_CREATE_WORKFLOW = "CREATE_WORKFLOW";
+    public static final String ACTION_CLONE_WORKFLOW = "CLONE_WORKFLOW";
+    public static final String ACTION_SAVE_DRAFT = "SAVE_DRAFT";
 
     private final AuditLogRepository auditLogRepository;
 
