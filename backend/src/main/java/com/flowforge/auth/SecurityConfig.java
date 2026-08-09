@@ -34,6 +34,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final RestAccessDeniedHandler accessDeniedHandler;
 
     /**
      * Configure the security filter chain.
@@ -53,11 +55,20 @@ public class SecurityConfig {
                         // Public endpoints - authentication and password reset
                         .requestMatchers("/api/auth/**").permitAll()
                         
-                        // Health check endpoint (if added)
-                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        // Health check endpoint (Actuator, exposure limited to health)
+                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**")
+                        .permitAll()
                         
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
+                )
+                
+                // Answer 401 for missing/invalid authentication and 403 for insufficient role.
+                // Without this, a stateless chain with no login mechanism falls back to
+                // Http403ForbiddenEntryPoint and returns 403 where Requirement 3.3 mandates 401.
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
                 )
                 
                 // Stateless session management (no server-side sessions)

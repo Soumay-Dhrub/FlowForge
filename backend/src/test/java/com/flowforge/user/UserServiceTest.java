@@ -205,7 +205,7 @@ class UserServiceTest {
     void configuredPasswordEncoder_isBcryptWithStrength12() {
         // Requirement 1.4: bcrypt work factor of at least 12. The property tests use a cheaper
         // strength for speed, so the production wiring is asserted here instead.
-        PasswordEncoder production = new SecurityConfig(null).passwordEncoder();
+        PasswordEncoder production = new SecurityConfig(null, null, null).passwordEncoder();
 
         assertThat(production).isInstanceOf(BCryptPasswordEncoder.class);
         assertThat(production.encode(PASSWORD)).startsWith("$2a$12$");
