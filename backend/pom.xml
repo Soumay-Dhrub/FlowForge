@@ -26,8 +26,19 @@
         <lombok.version>1.18.46</lombok.version>
         <jjwt.version>0.11.5</jjwt.version>
         <jqwik.version>1.8.3</jqwik.version>
-        <testcontainers.version>1.19.7</testcontainers.version>
+        <!--
+            1.20.x carries a docker-java that negotiates a Docker Engine API version of 1.44 or
+            newer. 1.19.7 pins 1.32, which current engines refuse outright ("client version 1.32
+            is too old"), so integration tests could not reach a container at all.
+        -->
+        <testcontainers.version>1.20.6</testcontainers.version>
         <flyway.version>10.10.0</flyway.version>
+        <!--
+            JUnit tags surefire skips by default. Overridden by the `integration` profile, which is
+            why this is a property: an empty <excludedGroups/> element in a profile does not clear an
+            inherited value, it inherits it, so the profile has to supply a replacement.
+        -->
+        <surefire.excluded.groups>integration</surefire.excluded.groups>
     </properties>
 
     <dependencies>
@@ -214,13 +225,16 @@
                 </configuration>
                 <executions>
                     <!--
-                        Sources emitted by annotation processors in a later javac round (the
-                        MapStruct *MapperImpl classes) are written at the running JDK's class
-                        file version instead of the requested release. On a JDK newer than 21
-                        that makes them unreadable during test compilation. Recompiling the
-                        generated sources with annotation processing switched off puts them in
-                        the first round, so they are emitted at the Java 21 class file version.
-                        On a JDK 21 build (CI, Docker) this execution is a harmless no-op.
+                        Class files javac writes outside the first annotation processing round —
+                        the MapStruct *MapperImpl classes, and the package-info classes emitted
+                        in the final round — carry the running JDK's class file version instead
+                        of the requested release. On a JDK newer than 21 that makes them
+                        unreadable: test compilation rejects the mappers, and Spring's classpath
+                        scanning rejects the package-info classes, so the application context
+                        will not even start. Recompiling those sources with annotation processing
+                        switched off puts them in the first round, where the requested release is
+                        honoured. On a JDK 21 build (CI, Docker) this execution is a harmless
+                        no-op.
                     -->
                     <execution>
                         <id>recompile-generated-mappers</id>
@@ -234,6 +248,7 @@
                             <staleMillis>-100000</staleMillis>
                             <includes>
                                 <include>**/*MapperImpl.java</include>
+                                <include>**/package-info.java</include>
                             </includes>
                         </configuration>
                     </execution>
@@ -245,7 +260,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <excludedGroups>integration</excludedGroups>
+                    <excludedGroups>${surefire.excluded.groups}</excludedGroups>
                 </configuration>
             </plugin>
             <plugin>
@@ -266,6 +281,13 @@
     <profiles>
         <profile>
             <id>integration</id>
+            <properties>
+                <!--
+                    Exclude a tag nothing carries, which is how you say "exclude nothing" without
+                    handing surefire an empty tag expression.
+                -->
+                <surefire.excluded.groups>never</surefire.excluded.groups>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -273,7 +295,14 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <groups>integration</groups>
-                            <excludedGroups/>
+                            <systemPropertyVariables>
+                                <!--
+                                    docker-java still defaults to Engine API 1.32, which engines
+                                    from Docker 25 onwards refuse. Ask for the oldest version they
+                                    all accept rather than letting the default fail the connection.
+                                -->
+                                <api.version>1.44</api.version>
+                            </systemPropertyVariables>
                         </configuration>
                     </plugin>
                 </plugins>
