@@ -15,6 +15,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# Next.js resolves rewrite destinations at build time and freezes them into routes-manifest.json,
+# so the backend address has to be supplied here rather than as a runtime environment variable.
+# Inside compose the backend is reachable by service name, not on localhost.
+ARG API_PROXY_TARGET=http://backend:8080
+ENV API_PROXY_TARGET=$API_PROXY_TARGET
 RUN pnpm build
 
 # ── Stage 3: Run ────────────────────────────────────────────────
