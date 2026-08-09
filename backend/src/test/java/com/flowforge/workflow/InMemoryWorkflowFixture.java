@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -124,11 +125,6 @@ final class InMemoryWorkflowFixture {
                 .thenAnswer(call -> nodesOf(call.getArgument(0)).stream()
                         .filter(node -> node.getType() == call.<NodeType>getArgument(1))
                         .toList());
-        // void derived deletes cannot be stubbed with when(...); answer through doAnswer instead.
-        doAnswer(call -> {
-            nodesOf(call.getArgument(0)).forEach(node -> nodesById.remove(node.getId()));
-            return null;
-        }).when(nodeRepository).deleteByVersionId(any(UUID.class));
 
         when(edgeRepository.save(any(WorkflowEdge.class))).thenAnswer(call -> {
             WorkflowEdge edge = call.getArgument(0);
@@ -140,10 +136,16 @@ final class InMemoryWorkflowFixture {
         });
         when(edgeRepository.findByVersionIdOrderByCreatedAtAscIdAsc(any(UUID.class)))
                 .thenAnswer(call -> edgesOf(call.getArgument(0)));
+
+        // Flushing is where JPA applies orphan removal, so the store models it there: a node or edge
+        // that is no longer held by its version's collection no longer has a row. Without this the
+        // in-memory store would keep rows the production mapping deletes, and the tests that prove a
+        // draft save replaces its graph rather than appending to it would be checking nothing.
+        // void methods cannot be stubbed with when(...); answer through doAnswer instead.
         doAnswer(call -> {
-            edgesOf(call.getArgument(0)).forEach(edge -> edgesById.remove(edge.getId()));
+            applyOrphanRemoval();
             return null;
-        }).when(edgeRepository).deleteByVersionId(any(UUID.class));
+        }).when(versionRepository).flush();
 
         when(userRepository.findById(any(UUID.class)))
                 .thenAnswer(call -> Optional.ofNullable(usersById.get(call.<UUID>getArgument(0))));
@@ -236,6 +238,27 @@ final class InMemoryWorkflowFixture {
                 .filter(version -> version.getWorkflow() != null
                         && workflowId.equals(version.getWorkflow().getId()))
                 .toList();
+    }
+
+    /**
+     * Drop the rows whose entity has been detached from its version's collection — the in-memory
+     * equivalent of {@code orphanRemoval = true}. Edges go before nodes, mirroring the order the
+     * foreign keys require.
+     */
+    private void applyOrphanRemoval() {
+        edgesById.values().removeIf(edge -> isOrphaned(edge.getVersion(), edge, WorkflowVersion::getEdges));
+        nodesById.values().removeIf(node -> isOrphaned(node.getVersion(), node, WorkflowVersion::getNodes));
+    }
+
+    private <T> boolean isOrphaned(
+            WorkflowVersion version,
+            T child,
+            Function<WorkflowVersion, List<T>> children
+    ) {
+        if (version == null || !versionsById.containsKey(version.getId())) {
+            return false;
+        }
+        return !children.apply(version).contains(child);
     }
 
     List<AuditLog> auditEntriesWithAction(String action) {

@@ -27,9 +27,4 @@ public interface WorkflowEdgeRepository extends JpaRepository<WorkflowEdge, UUID
      * Inbound edges of a node — used by AND-Join branch bookkeeping (Requirement 10.2).
      */
     List<WorkflowEdge> findByTargetNodeIdOrderByCreatedAtAscIdAsc(UUID targetNodeId);
-
-    /**
-     * Drop every edge of a draft version before rewriting it from a draft save payload.
-     */
-    void deleteByVersionId(UUID versionId);
 }

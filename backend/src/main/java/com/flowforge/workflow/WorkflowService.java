@@ -249,6 +249,20 @@ public class WorkflowService {
      * <p>Validation runs before anything is deleted, so a rejected payload leaves the stored draft
      * exactly as it was. Old edges are removed before old nodes so the edge foreign keys stay
      * satisfied at every point.</p>
+     *
+     * <h2>One deletion strategy, and it is JPA's</h2>
+     * <p>Emptying {@link WorkflowVersion#getEdges()} and {@link WorkflowVersion#getNodes()} is what
+     * removes the old rows: both collections are mapped with {@code orphanRemoval}, so the
+     * persistence context and the database stay in agreement about what is gone. Deleting the same
+     * rows with a repository query as well would break that agreement — the deleted rows would still
+     * be managed in the session, and the flush would then issue an update against a row that is on
+     * its way out, blanking its NOT NULL foreign keys. That is why the second save of a draft used to
+     * fail while the first one succeeded.</p>
+     *
+     * <p>Each stage is flushed deliberately. Edges reach the database before the nodes they point at,
+     * so no foreign key is ever left dangling mid-transaction; the old graph is gone before the new
+     * one is inserted; and the insert of the new graph is flushed before the caller is told the save
+     * worked.</p>
      */
     private void replaceGraph(
             WorkflowVersion version,
@@ -257,10 +271,10 @@ public class WorkflowService {
     ) {
         validatePayload(nodeRequests, edgeRequests);
 
-        edgeRepository.deleteByVersionId(version.getId());
-        nodeRepository.deleteByVersionId(version.getId());
         version.getEdges().clear();
+        versionRepository.flush();
         version.getNodes().clear();
+        versionRepository.flush();
 
         Map<UUID, WorkflowNode> byPayloadId = new LinkedHashMap<>();
         for (WorkflowNodeRequest request : nodeRequests) {
@@ -288,6 +302,9 @@ public class WorkflowService {
         }
 
         version.setGraphJson(buildGraphJson(version.getNodes(), version.getEdges()));
+        // Land the rewrite before the caller is told it worked: the response, the audit entry and the
+        // log line are then all statements about what is actually stored.
+        versionRepository.flush();
     }
 
     /**

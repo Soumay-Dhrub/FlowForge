@@ -28,9 +28,4 @@ public interface WorkflowNodeRepository extends JpaRepository<WorkflowNode, UUID
      * Look up a node scoped to its version.
      */
     Optional<WorkflowNode> findByIdAndVersionId(UUID id, UUID versionId);
-
-    /**
-     * Drop every node of a draft version before rewriting it from a draft save payload.
-     */
-    void deleteByVersionId(UUID versionId);
 }
