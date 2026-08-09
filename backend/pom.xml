@@ -185,10 +185,9 @@
                 <version>3.11.0</version>
                 <configuration>
                     <!--
-                        Use the release flag rather than source/target: with source/target only,
-                        classes emitted by annotation processors in later rounds (e.g. MapStruct
-                        impls) are written at the running JDK's class file version, which breaks
-                        test compilation when the build JDK is newer than 21.
+                        Target Java 21 (the project standard, and the JDK used by CI).
+                        The release flag is used rather than source/target so the JDK 21 API
+                        signatures are enforced even when the build runs on a newer local JDK.
                     -->
                     <release>${maven.compiler.release}</release>
                     <annotationProcessorPaths>
@@ -207,6 +206,32 @@
                         <arg>-Amapstruct.defaultComponentModel=spring</arg>
                     </compilerArgs>
                 </configuration>
+                <executions>
+                    <!--
+                        Sources emitted by annotation processors in a later javac round (the
+                        MapStruct *MapperImpl classes) are written at the running JDK's class
+                        file version instead of the requested release. On a JDK newer than 21
+                        that makes them unreadable during test compilation. Recompiling the
+                        generated sources with annotation processing switched off puts them in
+                        the first round, so they are emitted at the Java 21 class file version.
+                        On a JDK 21 build (CI, Docker) this execution is a harmless no-op.
+                    -->
+                    <execution>
+                        <id>recompile-generated-mappers</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <proc>none</proc>
+                            <useIncrementalCompilation>false</useIncrementalCompilation>
+                            <staleMillis>-100000</staleMillis>
+                            <includes>
+                                <include>**/*MapperImpl.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Integration test profile separation -->
