@@ -1,0 +1,11 @@
+version: "3.9"
+
+# Override file: automatically loaded by docker-compose for local dev.
+# Adds pgAdmin and MailHog without needing --profile flags.
+
+services:
+  pgadmin:
+    profiles: []   # remove profile restriction so it starts automatically in dev
+
+  mailhog:
+    profiles: []
