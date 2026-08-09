@@ -21,8 +21,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <!-- Cleared so the compiler plugin uses source/target; see maven-compiler-plugin config below. -->
-        <maven.compiler.release></maven.compiler.release>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <lombok.version>1.18.46</lombok.version>
         <jjwt.version>0.11.5</jjwt.version>
@@ -186,13 +185,12 @@
                 <version>3.11.0</version>
                 <configuration>
                     <!--
-                        source/target are used instead of the release flag: with an
-                        annotation processor on the path, javac emits classes generated in
-                        later rounds (e.g. MapStruct impls) at the JDK's own class file
-                        version, which breaks test compilation on JDKs newer than 21.
+                        Use the release flag rather than source/target: with source/target only,
+                        classes emitted by annotation processors in later rounds (e.g. MapStruct
+                        impls) are written at the running JDK's class file version, which breaks
+                        test compilation when the build JDK is newer than 21.
                     -->
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <release>${maven.compiler.release}</release>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
