@@ -8,6 +8,8 @@ import com.flowforge.user.User;
 import com.flowforge.user.UserRepository;
 import com.flowforge.workflow.NodeType;
 import com.flowforge.workflow.Workflow;
+import com.flowforge.workflow.WorkflowEdge;
+import com.flowforge.workflow.WorkflowEdgeRepository;
 import com.flowforge.workflow.WorkflowNode;
 import com.flowforge.workflow.WorkflowNodeRepository;
 import com.flowforge.workflow.WorkflowRepository;
@@ -46,6 +48,7 @@ final class InMemoryEngineFixture {
     final Map<UUID, Workflow> workflowsById = new LinkedHashMap<>();
     final Map<UUID, WorkflowVersion> versionsById = new LinkedHashMap<>();
     final Map<UUID, WorkflowNode> nodesById = new LinkedHashMap<>();
+    final List<WorkflowEdge> edges = new ArrayList<>();
     final Map<UUID, WorkflowInstance> instancesById = new LinkedHashMap<>();
     final Map<UUID, User> usersById = new LinkedHashMap<>();
     final List<AuditLog> auditEntries = new ArrayList<>();
@@ -56,12 +59,16 @@ final class InMemoryEngineFixture {
     final WorkflowRepository workflowRepository = mock(WorkflowRepository.class);
     final WorkflowVersionRepository versionRepository = mock(WorkflowVersionRepository.class);
     final WorkflowNodeRepository nodeRepository = mock(WorkflowNodeRepository.class);
+    final WorkflowEdgeRepository edgeRepository = mock(WorkflowEdgeRepository.class);
     final WorkflowInstanceRepository instanceRepository = mock(WorkflowInstanceRepository.class);
     final UserRepository userRepository = mock(UserRepository.class);
     final AuditLogRepository auditLogRepository = mock(AuditLogRepository.class);
     final AuditLogService auditLogService = new AuditLogService(auditLogRepository);
 
     private final List<NodeExecutor> executors = new ArrayList<>();
+
+    /** The routing seam the real executors will use, wired to the same in-memory graph. */
+    final NodeTransitions transitions = new NodeTransitions(edgeRepository);
 
     final User initiator = user("Ada Lovelace", "ada@example.com");
 
@@ -81,6 +88,15 @@ final class InMemoryEngineFixture {
                 .thenAnswer(call -> nodesById.values().stream()
                         .filter(node -> node.getVersion().getId().equals(call.<UUID>getArgument(0)))
                         .filter(node -> node.getType() == call.<NodeType>getArgument(1))
+                        .toList());
+
+        when(edgeRepository.findBySourceNodeIdOrderByCreatedAtAscIdAsc(any(UUID.class)))
+                .thenAnswer(call -> edges.stream()
+                        .filter(edge -> edge.getSourceNode().getId().equals(call.<UUID>getArgument(0)))
+                        .toList());
+        when(edgeRepository.findByTargetNodeIdOrderByCreatedAtAscIdAsc(any(UUID.class)))
+                .thenAnswer(call -> edges.stream()
+                        .filter(edge -> edge.getTargetNode().getId().equals(call.<UUID>getArgument(0)))
                         .toList());
 
         when(instanceRepository.save(any(WorkflowInstance.class))).thenAnswer(call -> {
@@ -176,6 +192,20 @@ final class InMemoryEngineFixture {
         nodesById.put(node.getId(), node);
         version.getNodes().add(node);
         return node;
+    }
+
+    /** A directed edge between two nodes. Appended in call order, which is the order finders return. */
+    WorkflowEdge edge(WorkflowNode source, WorkflowNode target, String conditionExpr) {
+        WorkflowEdge created = WorkflowEdge.builder()
+                .id(UUID.randomUUID())
+                .version(source.getVersion())
+                .sourceNode(source)
+                .targetNode(target)
+                .conditionExpr(conditionExpr)
+                .createdAt(Instant.now())
+                .build();
+        edges.add(created);
+        return created;
     }
 
     List<AuditLog> auditEntriesWithAction(String action) {

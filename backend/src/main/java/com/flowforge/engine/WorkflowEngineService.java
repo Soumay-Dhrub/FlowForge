@@ -55,6 +55,11 @@ import java.util.UUID;
  * A deliberate failure is different from a crash: {@link #markError} records it as an ERROR
  * transition that commits with the rest of the work, which is the path Requirement 9.5 needs.
  *
+ * <p>The engine deliberately does not decide <em>where</em> an instance goes next — that is
+ * {@link NodeTransitions}, which owns edge resolution and the position change. The engine only
+ * notices that the position changed and keeps going. Sequential routing, condition routing and
+ * parallel fan-out are therefore variations on one seam rather than three shapes of engine.
+ *
  * <p>Task 16 delivers the core only. The individual executors arrive in tasks 17 and 18, and AND-Join
  * branch bookkeeping in task 19; until an executor bean exists for a node type,
  * {@link NodeExecutorFactory} throws rather than stalling an instance in silence.

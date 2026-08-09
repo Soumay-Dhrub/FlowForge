@@ -224,6 +224,35 @@ class WorkflowEngineServiceTest {
                 .containsExactly(start.getId(), approval.getId(), approval.getId());
     }
 
+    /**
+     * The seam tasks 17–19 build on, driven by the engine: executors route with
+     * {@link NodeTransitions} rather than knowing their successor, and the engine chains the graph
+     * Start → Notification → Approval off the edges alone.
+     */
+    @Test
+    void advance_followsTheGraphWhenExecutorsRouteThroughNodeTransitions() {
+        Workflow workflow = fixture.workflow("Expense Approval");
+        WorkflowVersion current = fixture.version(workflow, 1, true, true);
+        WorkflowNode start = fixture.node(current, NodeType.START);
+        WorkflowNode notification = fixture.node(current, NodeType.NOTIFICATION);
+        WorkflowNode approval = fixture.node(current, NodeType.APPROVAL);
+        fixture.edge(start, notification, null);
+        fixture.edge(notification, approval, null);
+        fixture.registerExecutor(RecordingNodeExecutor.of(NodeType.START,
+                (instance, node) -> fixture.transitions.followSoleOutgoingEdge(instance, node)));
+        fixture.registerExecutor(RecordingNodeExecutor.of(NodeType.NOTIFICATION,
+                (instance, node) -> fixture.transitions.followSoleOutgoingEdge(instance, node)));
+        fixture.registerExecutor(RecordingNodeExecutor.pausing(NodeType.APPROVAL));
+
+        WorkflowInstance instance = fixture.engine()
+                .createInstance(workflow.getId(), fixture.initiator.getId(), Map.of("amount", 900));
+
+        assertThat(instance.getStatus()).isEqualTo(InstanceStatus.RUNNING);
+        assertThat(instance.currentNodeId()).isEqualTo(approval.getId());
+        assertThat(fixture.savedPositions)
+                .containsExactly(start.getId(), notification.getId(), approval.getId(), approval.getId());
+    }
+
     /** A terminal status ends the call, even if further executors exist. */
     @Test
     void advance_stopsWhenAnExecutorSetsATerminalStatus() {

@@ -13,9 +13,9 @@ import com.flowforge.workflow.WorkflowNode;
  * <p>{@link #execute} runs inside {@link WorkflowEngineService#advance}'s transaction and
  * communicates its outcome by mutating the instance it is handed:
  * <ul>
- *   <li><b>Advance</b> — set {@link WorkflowInstance#setCurrentNode(WorkflowNode)} to the next node.
- *       The engine persists the move and then executes that node too, so a chain of automatic nodes
- *       resolves within one transaction.</li>
+ *   <li><b>Advance</b> — move the instance on with {@link NodeTransitions}, which resolves the node's
+ *       outgoing edges and sets the new position. The engine persists the move and then executes that
+ *       node too, so a chain of automatic nodes resolves within one transaction.</li>
  *   <li><b>Pause</b> — leave the current node and status untouched. That is how a Task, an Approval
  *       or an unsatisfied AND-Join stops execution: the instance stays {@code RUNNING} exactly where
  *       it is until something external (a decision, a branch completing) calls {@code advance}
