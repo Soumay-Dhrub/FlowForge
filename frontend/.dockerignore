@@ -1,0 +1,11 @@
+# Keep host build artefacts out of the image: the builder stage relies on the
+# node_modules copied from the deps stage (linux binaries), not the host's.
+node_modules
+.next
+out
+coverage
+.git
+.DS_Store
+*.log
+.env
+.env*.local

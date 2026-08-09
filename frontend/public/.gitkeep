@@ -1,0 +1,2 @@
+# Next.js static assets live here. Kept in git so the Docker runtime stage's
+# `COPY /app/public ./public` has a source directory to copy.
