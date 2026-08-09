@@ -67,6 +67,12 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
+        <!-- ── Actuator (health endpoint used by the docker-compose healthcheck) ── -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- ── Thymeleaf (email templates) ── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

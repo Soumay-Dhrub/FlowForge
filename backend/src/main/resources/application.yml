@@ -39,5 +39,23 @@ app:
     max-size-bytes: ${ATTACHMENT_MAX_SIZE:10485760}
     allowed-types: application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document
 
+management:
+  endpoints:
+    web:
+      exposure:
+        # Only the health endpoint is exposed; everything else stays off by default.
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+  health:
+    # The container healthcheck drives depends_on: service_healthy, so it must reflect whether the
+    # application can serve requests. An unreachable SMTP host does not stop it from serving:
+    # mail delivery is a downstream concern, not a liveness signal.
+    mail:
+      enabled: false
+
 server:
   port: 8080
