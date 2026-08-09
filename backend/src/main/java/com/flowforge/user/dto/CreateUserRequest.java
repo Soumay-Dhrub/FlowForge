@@ -27,6 +27,8 @@ public record CreateUserRequest(
         @NotNull(message = "Role ID is required")
         UUID roleId,
 
+        // Requirement 1.3 lists department among the required registration fields.
+        @NotNull(message = "Department ID is required")
         UUID departmentId
 ) {
 }
