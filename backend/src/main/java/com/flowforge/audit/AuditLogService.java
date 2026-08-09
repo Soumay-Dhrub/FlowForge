@@ -1,0 +1,98 @@
+package com.flowforge.audit;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Write seam for the audit trail (Requirement 19.1).
+ *
+ * <p>Services call {@link #record} directly for now. Task 28 adds {@code AuditLogAspect}, which
+ * will intercept service writes generically and funnel through this same method, plus the search
+ * and CSV export endpoints. Keeping the seam here means later tasks change <em>who</em> calls
+ * {@code record}, not <em>how</em> an entry is written.</p>
+ *
+ * <p>The service only ever appends. No update or delete operation is exposed (Requirement 19.2).</p>
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AuditLogService {
+
+    /** Entity type discriminator for {@link com.flowforge.user.User} rows. */
+    public static final String ENTITY_USER = "User";
+
+    public static final String ACTION_CREATE_USER = "CREATE_USER";
+    public static final String ACTION_UPDATE_USER = "UPDATE_USER";
+    public static final String ACTION_STATUS_CHANGE = "STATUS_CHANGE";
+
+    private final AuditLogRepository auditLogRepository;
+
+    /**
+     * Append an audit entry, attributing it to the caller in the current security context.
+     *
+     * @param action      action type, e.g. {@code CREATE_USER}
+     * @param entityType  entity discriminator, e.g. {@code User}
+     * @param entityId    id of the affected entity
+     * @param beforeState state before the change, or {@code null} for creates
+     * @param afterState  state after the change, or {@code null} for deletes
+     * @return the persisted entry
+     */
+    @Transactional
+    public AuditLog record(
+            String action,
+            String entityType,
+            UUID entityId,
+            Map<String, Object> beforeState,
+            Map<String, Object> afterState
+    ) {
+        return record(currentActorId(), action, entityType, entityId, beforeState, afterState);
+    }
+
+    /**
+     * Append an audit entry for an explicit actor. Used when the acting identity is known but not
+     * present in the security context (scheduled jobs, system bootstrap).
+     */
+    @Transactional
+    public AuditLog record(
+            UUID actorId,
+            String action,
+            String entityType,
+            UUID entityId,
+            Map<String, Object> beforeState,
+            Map<String, Object> afterState
+    ) {
+        AuditLog entry = auditLogRepository.save(AuditLog.builder()
+                .actorId(actorId)
+                .action(action)
+                .entityType(entityType)
+                .entityId(entityId)
+                .beforeState(beforeState)
+                .afterState(afterState)
+                .build());
+
+        log.debug("Audit entry {} recorded: actor={} entity={}:{}", action, actorId, entityType, entityId);
+        return entry;
+    }
+
+    /**
+     * The authenticated caller's id, or {@code null} when the action has no authenticated actor.
+     *
+     * <p>{@code JwtAuthenticationFilter} sets the principal to the user's UUID, so anything else
+     * (an anonymous token, a test principal) is treated as "no actor" rather than guessed at.</p>
+     */
+    public UUID currentActorId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        return principal instanceof UUID userId ? userId : null;
+    }
+}
