@@ -91,6 +91,11 @@ public class WorkflowService {
 
         WorkflowVersion draft = createDraftVersion(workflow);
 
+        // created_at/updated_at are stamped as the rows are written, and the identifier generator
+        // does not force a write on its own. Without flushing first, the 201 response would report
+        // null timestamps for a workflow the database has already dated.
+        versionRepository.flush();
+
         auditLogService.record(
                 AuditLogService.ACTION_CREATE_WORKFLOW,
                 AuditLogService.ENTITY_WORKFLOW,
