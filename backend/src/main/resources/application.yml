@@ -24,8 +24,10 @@ spring:
 app:
   jwt:
     secret: ${JWT_SECRET:change-me-in-production-must-be-at-least-256-bits}
+    # access token: 15 minutes
     access-token-expiry-ms: ${JWT_ACCESS_EXPIRY_MS:900000}
-    refresh-token-expiry-ms: ${JWT_REFRESH_EXPIRY_MS:2592000000}
+    # refresh token: 7 days
+    refresh-token-expiry-ms: ${JWT_REFRESH_EXPIRY_MS:604800000}
   attachment:
     max-size-bytes: ${ATTACHMENT_MAX_SIZE:10485760}
     allowed-types: application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document

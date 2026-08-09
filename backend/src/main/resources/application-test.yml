@@ -12,4 +12,4 @@ app:
   jwt:
     secret: test-secret-key-for-unit-tests-only-256bits-long!!
     access-token-expiry-ms: 900000
-    refresh-token-expiry-ms: 2592000000
+    refresh-token-expiry-ms: 604800000
