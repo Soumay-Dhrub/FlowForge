@@ -5,6 +5,9 @@ build/
 *.jar
 *.war
 
+# Test artifacts
+.jqwik-database
+
 # Environment
 .env
 .env.local
