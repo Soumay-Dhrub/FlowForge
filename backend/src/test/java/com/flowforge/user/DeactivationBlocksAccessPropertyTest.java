@@ -3,6 +3,7 @@ package com.flowforge.user;
 import com.flowforge.auth.AuthService;
 import com.flowforge.auth.JwtAuthenticationFilter;
 import com.flowforge.auth.JwtTokenProvider;
+import com.flowforge.auth.PasswordResetTokenRepository;
 import com.flowforge.auth.RefreshToken;
 import com.flowforge.auth.dto.TokenResponse;
 import com.flowforge.common.exception.AppException;
@@ -64,7 +65,12 @@ class DeactivationBlocksAccessPropertyTest {
                 fixture.userRepository,
                 fixture.refreshTokenRepository,
                 fixture.passwordEncoder,
-                jwtTokenProvider);
+                jwtTokenProvider,
+                mock(PasswordResetTokenRepository.class),
+                (to, subject, body) -> { },
+                fixture.auditLogService,
+                24 * 60 * 60 * 1000L,
+                "https://flowforge.test/reset-password");
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtTokenProvider, fixture.userRepository);
 
         UserResponse created = fixture.userService.createUser(new CreateUserRequest(

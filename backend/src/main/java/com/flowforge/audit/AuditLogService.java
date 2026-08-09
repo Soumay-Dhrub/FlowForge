@@ -31,6 +31,7 @@ public class AuditLogService {
     public static final String ACTION_CREATE_USER = "CREATE_USER";
     public static final String ACTION_UPDATE_USER = "UPDATE_USER";
     public static final String ACTION_STATUS_CHANGE = "STATUS_CHANGE";
+    public static final String ACTION_PASSWORD_RESET = "PASSWORD_RESET";
 
     private final AuditLogRepository auditLogRepository;
 

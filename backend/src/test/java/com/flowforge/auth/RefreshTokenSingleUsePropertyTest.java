@@ -1,5 +1,7 @@
 package com.flowforge.auth;
 
+import com.flowforge.audit.AuditLogRepository;
+import com.flowforge.audit.AuditLogService;
 import com.flowforge.auth.dto.TokenResponse;
 import com.flowforge.common.exception.AppException;
 import com.flowforge.user.Role;
@@ -123,8 +125,19 @@ class RefreshTokenSingleUsePropertyTest {
             when(refreshTokenRepository.findByToken(anyString()))
                     .thenAnswer(call -> Optional.ofNullable(tokensByValue.get(call.<String>getArgument(0))));
 
-            this.authService =
-                    new AuthService(userRepository, refreshTokenRepository, passwordEncoder, jwtTokenProvider);
+            // Password reset collaborators are irrelevant to this property: an inert repository,
+            // a no-op mailer and an audit service that writes nowhere keep the wiring honest
+            // without adding behaviour under test.
+            this.authService = new AuthService(
+                    userRepository,
+                    refreshTokenRepository,
+                    passwordEncoder,
+                    jwtTokenProvider,
+                    mock(PasswordResetTokenRepository.class),
+                    (to, subject, body) -> { },
+                    new AuditLogService(mock(AuditLogRepository.class)),
+                    24 * 60 * 60 * 1000L,
+                    "https://flowforge.test/reset-password");
         }
 
         private User persistActiveUser(String email, String rawPassword) {

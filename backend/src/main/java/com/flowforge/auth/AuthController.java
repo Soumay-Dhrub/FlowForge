@@ -2,6 +2,8 @@ package com.flowforge.auth;
 
 import com.flowforge.auth.dto.LoginRequest;
 import com.flowforge.auth.dto.LogoutRequest;
+import com.flowforge.auth.dto.PasswordResetConfirmRequest;
+import com.flowforge.auth.dto.PasswordResetRequest;
 import com.flowforge.auth.dto.RefreshRequest;
 import com.flowforge.auth.dto.TokenResponse;
 import com.flowforge.common.response.ApiResponse;
@@ -49,5 +51,30 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody LogoutRequest request) {
         authService.logout(request.refreshToken());
         return ResponseEntity.ok(ApiResponse.success("Logged out", null));
+    }
+
+    /**
+     * Request a password reset link (Requirement 5.1).
+     *
+     * <p>Answers 200 with the same message whether or not the address is registered, so the
+     * endpoint cannot be used to discover which emails have accounts.</p>
+     */
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<ApiResponse<Void>> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequest request) {
+        authService.requestPasswordReset(request.email());
+        return ResponseEntity.ok(ApiResponse.success(AuthService.PASSWORD_RESET_REQUESTED_MESSAGE, null));
+    }
+
+    /**
+     * Apply a new password using a reset token (Requirements 5.3, 5.4, 5.5).
+     *
+     * <p>Unknown, expired or already-used tokens yield 400 Bad Request.</p>
+     */
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<ApiResponse<Void>> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirmRequest request) {
+        authService.confirmPasswordReset(request.token(), request.newPassword());
+        return ResponseEntity.ok(ApiResponse.success("Password updated", null));
     }
 }
