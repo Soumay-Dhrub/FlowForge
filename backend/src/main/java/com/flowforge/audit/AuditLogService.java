@@ -34,6 +34,9 @@ public class AuditLogService {
     /** Entity type discriminator for {@link com.flowforge.workflow.WorkflowVersion} rows. */
     public static final String ENTITY_WORKFLOW_VERSION = "WorkflowVersion";
 
+    /** Entity type discriminator for {@link com.flowforge.engine.WorkflowInstance} rows. */
+    public static final String ENTITY_WORKFLOW_INSTANCE = "WorkflowInstance";
+
     public static final String ACTION_CREATE_USER = "CREATE_USER";
     public static final String ACTION_UPDATE_USER = "UPDATE_USER";
     public static final String ACTION_STATUS_CHANGE = "STATUS_CHANGE";
@@ -42,6 +45,8 @@ public class AuditLogService {
     public static final String ACTION_CLONE_WORKFLOW = "CLONE_WORKFLOW";
     public static final String ACTION_SAVE_DRAFT = "SAVE_DRAFT";
     public static final String ACTION_PUBLISH_VERSION = "PUBLISH_VERSION";
+    public static final String ACTION_CREATE_INSTANCE = "CREATE_INSTANCE";
+    public static final String ACTION_INSTANCE_ERROR = "INSTANCE_ERROR";
 
     private final AuditLogRepository auditLogRepository;
 
