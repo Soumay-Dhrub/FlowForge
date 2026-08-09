@@ -319,8 +319,15 @@ public class WorkflowService {
     /**
      * Deep-copy a source version's graph into a target draft, minting new identifiers and remapping
      * every edge onto the copied nodes.
+     *
+     * <p>Package-private rather than private: {@code WorkflowVersionService} reuses it to seed the
+     * successor draft it opens after a publish, so both paths copy a graph exactly one way.</p>
+     *
+     * @param source the version to copy from
+     * @param target the draft to copy into
+     * @throws WorkflowValidationException 422 when a source edge has an endpoint outside its version
      */
-    private void copyGraph(WorkflowVersion source, WorkflowVersion target) {
+    void copyGraph(WorkflowVersion source, WorkflowVersion target) {
         Map<UUID, WorkflowNode> bySourceId = new LinkedHashMap<>();
         for (WorkflowNode sourceNode : nodeRepository.findByVersionIdOrderByCreatedAtAscIdAsc(source.getId())) {
             WorkflowNode copy = nodeRepository.save(WorkflowNode.builder()
@@ -364,8 +371,15 @@ public class WorkflowService {
     /**
      * Serialize a graph into the {@code {"nodes":[...],"edges":[...]}} shape stored in
      * {@code graph_json}, preserving the order the nodes and edges were authored in.
+     *
+     * <p>Static and package-private so publishing produces byte-identical snapshots to draft saves
+     * (Requirement 7.6): one serializer, two callers.</p>
+     *
+     * @param nodes nodes in authored order
+     * @param edges edges in authored order
+     * @return the graph payload
      */
-    private Map<String, Object> buildGraphJson(List<WorkflowNode> nodes, List<WorkflowEdge> edges) {
+    static Map<String, Object> buildGraphJson(List<WorkflowNode> nodes, List<WorkflowEdge> edges) {
         List<Map<String, Object>> nodePayload = new ArrayList<>();
         for (WorkflowNode node : nodes) {
             Map<String, Object> entry = new LinkedHashMap<>();

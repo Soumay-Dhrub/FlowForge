@@ -41,6 +41,7 @@ public class AuditLogService {
     public static final String ACTION_CREATE_WORKFLOW = "CREATE_WORKFLOW";
     public static final String ACTION_CLONE_WORKFLOW = "CLONE_WORKFLOW";
     public static final String ACTION_SAVE_DRAFT = "SAVE_DRAFT";
+    public static final String ACTION_PUBLISH_VERSION = "PUBLISH_VERSION";
 
     private final AuditLogRepository auditLogRepository;
 

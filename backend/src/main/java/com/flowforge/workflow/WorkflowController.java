@@ -3,6 +3,7 @@ package com.flowforge.workflow;
 import com.flowforge.common.response.ApiResponse;
 import com.flowforge.workflow.dto.CloneWorkflowRequest;
 import com.flowforge.workflow.dto.CreateWorkflowRequest;
+import com.flowforge.workflow.dto.PublishRequest;
 import com.flowforge.workflow.dto.SaveDraftRequest;
 import com.flowforge.workflow.dto.WorkflowResponse;
 import com.flowforge.workflow.dto.WorkflowVersionResponse;
@@ -28,16 +29,18 @@ import java.util.UUID;
  * Workflow authoring endpoints.
  *
  * <p>Authorization follows the RBAC table in the design document (Requirements 3.1, 3.2). Workflow
- * authoring is a privileged activity, so every endpoint here is ADMIN or MANAGER:</p>
+ * authoring is a privileged activity, so every endpoint here is ADMIN or MANAGER — except
+ * publishing, which the design reserves for ADMIN alone:</p>
  * <ul>
  *   <li>{@code GET/POST /api/workflows} — ADMIN, MANAGER</li>
  *   <li>{@code GET /api/workflows/{id}} — ADMIN, MANAGER</li>
  *   <li>{@code PUT /api/workflows/{id}/versions/{vId}} — ADMIN, MANAGER</li>
  *   <li>{@code POST /api/workflows/{id}/clone} — ADMIN, MANAGER</li>
+ *   <li>{@code POST /api/workflows/{id}/versions/{vId}/publish} — ADMIN</li>
  * </ul>
  *
- * <p>Publishing is deliberately absent: the design reserves it for ADMIN and it arrives with
- * {@code WorkflowVersionService} in task 14. Employees never read definitions through this
+ * <p>A manager can therefore author freely but cannot make a definition live: publishing binds every
+ * future instance to that graph, so it sits with ADMIN. Employees never read definitions through this
  * controller — they interact with workflows through instances and tasks.</p>
  *
  * <p>Requests with no, expired, or malformed token never reach these methods — the security filter
@@ -50,6 +53,7 @@ import java.util.UUID;
 public class WorkflowController {
 
     private final WorkflowService workflowService;
+    private final WorkflowVersionService workflowVersionService;
 
     /**
      * List workflows, newest first, optionally filtered by a name fragment.
@@ -98,6 +102,26 @@ public class WorkflowController {
     ) {
         WorkflowVersionResponse saved = workflowService.saveDraft(id, versionId, request);
         return ResponseEntity.ok(ApiResponse.success("Draft saved", saved));
+    }
+
+    /**
+     * Publish a draft version as an immutable snapshot (Requirements 7.1–7.7). ADMIN only.
+     *
+     * <p>The body is optional: supply nodes and edges to save the canvas before publishing, or omit
+     * it to publish the stored draft as-is. Returns 422 listing every structural violation when the
+     * graph breaks any of the four rules, and 409 when the version is already published.</p>
+     */
+    @PostMapping("/{id}/versions/{versionId}/publish")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<WorkflowVersionResponse>> publishVersion(
+            @PathVariable UUID id,
+            @PathVariable UUID versionId,
+            @Valid @RequestBody(required = false) PublishRequest request,
+            @AuthenticationPrincipal UUID actorId
+    ) {
+        WorkflowVersionResponse published =
+                workflowVersionService.publish(id, versionId, request, actorId);
+        return ResponseEntity.ok(ApiResponse.success("Version published", published));
     }
 
     /**

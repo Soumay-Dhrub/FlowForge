@@ -52,6 +52,7 @@ final class InMemoryWorkflowFixture {
     final WorkflowVersionMapper versionMapper = new WorkflowVersionMapperImpl();
     final WorkflowMapper workflowMapper = new WorkflowMapperImpl(versionMapper);
     final WorkflowService workflowService;
+    final WorkflowVersionService workflowVersionService;
 
     final User admin = user("Ada Lovelace", "ada@example.com", "ADMIN");
     final User manager = user("Grace Hopper", "grace@example.com", "MANAGER");
@@ -85,6 +86,8 @@ final class InMemoryWorkflowFixture {
             versionsById.put(version.getId(), version);
             return version;
         });
+        when(versionRepository.findById(any(UUID.class)))
+                .thenAnswer(call -> Optional.ofNullable(versionsById.get(call.<UUID>getArgument(0))));
         when(versionRepository.findByIdAndWorkflowId(any(UUID.class), any(UUID.class))).thenAnswer(call -> {
             WorkflowVersion version = versionsById.get(call.<UUID>getArgument(0));
             UUID workflowId = call.getArgument(1);
@@ -163,6 +166,55 @@ final class InMemoryWorkflowFixture {
                 workflowMapper,
                 versionMapper,
                 auditLogService);
+        this.workflowVersionService = new WorkflowVersionService(
+                versionRepository,
+                nodeRepository,
+                edgeRepository,
+                userRepository,
+                versionMapper,
+                workflowService,
+                auditLogService);
+    }
+
+    // ── graph authoring helpers ──────────────────────────────────────────────────────────────────
+
+    /**
+     * Persist a node on a version, bypassing the draft-save payload path.
+     *
+     * <p>Publishing's structural rules run against the stored rows, and some of the shapes they have
+     * to reject — an edge whose endpoint is not part of the graph — cannot be expressed in a
+     * draft-save payload at all, since that path rejects them first. Writing rows directly is the
+     * only way to set those states up.</p>
+     */
+    WorkflowNode addNode(WorkflowVersion version, NodeType type) {
+        WorkflowNode node = nodeRepository.save(WorkflowNode.builder()
+                .version(version)
+                .type(type)
+                .configJson(new LinkedHashMap<>(Map.of("label", type.name().toLowerCase())))
+                .positionX(0)
+                .positionY(0)
+                .build());
+        version.getNodes().add(node);
+        return node;
+    }
+
+    /** Persist an edge on a version. Endpoints are used as given, valid or not. */
+    WorkflowEdge addEdge(WorkflowVersion version, WorkflowNode source, WorkflowNode target) {
+        WorkflowEdge edge = edgeRepository.save(WorkflowEdge.builder()
+                .version(version)
+                .sourceNode(source)
+                .targetNode(target)
+                .build());
+        version.getEdges().add(edge);
+        return edge;
+    }
+
+    /** The draft version of a workflow with the highest version number. */
+    WorkflowVersion draftOf(UUID workflowId) {
+        return versionsOf(workflowId).stream()
+                .filter(WorkflowVersion::isDraft)
+                .max(Comparator.comparing(WorkflowVersion::getVersionNumber))
+                .orElseThrow();
     }
 
     /** Nodes belonging to a version, in insertion order — the in-memory stand-in for created_at. */
