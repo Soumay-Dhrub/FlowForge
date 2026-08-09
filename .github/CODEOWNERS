@@ -1,0 +1,33 @@
+# FlowForge Code Owners
+# 
+# These owners will be automatically requested for review when PRs modify specific paths.
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @flowforge/core-team
+
+# Backend code ownership
+/backend/ @flowforge/backend-team
+/backend/src/main/java/com/flowforge/auth/ @flowforge/security-team
+/backend/src/main/java/com/flowforge/workflow/ @flowforge/workflow-team
+/backend/src/main/java/com/flowforge/engine/ @flowforge/workflow-team
+/backend/src/main/resources/db/migration/ @flowforge/backend-team @flowforge/dba-team
+
+# Frontend code ownership
+/frontend/ @flowforge/frontend-team
+/frontend/src/app/ @flowforge/frontend-team
+/frontend/src/components/ @flowforge/frontend-team
+
+# Infrastructure and DevOps
+/.github/ @flowforge/devops-team
+/docker-compose.yml @flowforge/devops-team
+/backend/Dockerfile @flowforge/devops-team
+/frontend/Dockerfile @flowforge/devops-team
+
+# Documentation
+/README.md @flowforge/core-team
+*.md @flowforge/docs-team
+
+# Configuration files
+.env.example @flowforge/devops-team @flowforge/security-team
+/backend/src/main/resources/application*.yml @flowforge/backend-team @flowforge/devops-team
