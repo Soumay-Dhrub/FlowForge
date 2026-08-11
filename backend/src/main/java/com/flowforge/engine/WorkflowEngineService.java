@@ -18,7 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,6 +84,7 @@ public class WorkflowEngineService {
     private final UserRepository userRepository;
     private final NodeExecutorFactory executorFactory;
     private final AuditLogService auditLogService;
+    private final InstanceErrorRecorder errorRecorder;
 
     /**
      * Submit a request against a workflow, starting an instance on its published definition
@@ -208,9 +208,14 @@ public class WorkflowEngineService {
     /**
      * Record a deliberate execution failure: status {@code ERROR}, with a descriptive audit entry.
      *
-     * <p>Used by executors for failures that are an outcome rather than a crash — the Condition node
-     * whose edges all evaluate false, for instance (Requirement 9.5). It runs inside the caller's
-     * transaction, so the ERROR position commits together with the work that led to it.
+     * <p>Used for failures that are an outcome rather than a crash — the Condition node whose edges
+     * all evaluate false, for instance (Requirement 9.5). It runs inside the caller's transaction, so
+     * the ERROR position commits together with the work that led to it.
+     *
+     * <p>The transition itself lives in {@link InstanceErrorRecorder}, which executors depend on
+     * directly; they cannot depend on this service without closing a cycle through
+     * {@link NodeExecutorFactory}. This method stays as the engine-facing name for the same
+     * behaviour.
      *
      * @param instance the instance to fail
      * @param reason   why, recorded verbatim in the audit trail
@@ -218,24 +223,7 @@ public class WorkflowEngineService {
      */
     @Transactional
     public WorkflowInstance markError(WorkflowInstance instance, String reason) {
-        Map<String, Object> before = snapshot(instance);
-
-        instance.setStatus(InstanceStatus.ERROR);
-        instance.setCompletedAt(Instant.now());
-        WorkflowInstance failed = instanceRepository.save(instance);
-
-        Map<String, Object> after = snapshot(failed);
-        after.put("reason", reason);
-        auditLogService.record(
-                AuditLogService.ACTION_INSTANCE_ERROR,
-                AuditLogService.ENTITY_WORKFLOW_INSTANCE,
-                failed.getId(),
-                before,
-                after);
-
-        log.warn("Instance {} marked ERROR at node {}: {}",
-                failed.getId(), failed.currentNodeId(), reason);
-        return failed;
+        return errorRecorder.markError(instance, reason);
     }
 
     // ── lookups ──────────────────────────────────────────────────────────────────────────────────

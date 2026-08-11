@@ -3,7 +3,10 @@ package com.flowforge.engine;
 import com.flowforge.audit.AuditLog;
 import com.flowforge.audit.AuditLogRepository;
 import com.flowforge.audit.AuditLogService;
+import com.flowforge.engine.executors.ApprovalNodeExecutor;
 import com.flowforge.engine.executors.AssigneeResolver;
+import com.flowforge.engine.executors.ConditionEvaluator;
+import com.flowforge.engine.executors.ConditionNodeExecutor;
 import com.flowforge.engine.executors.EndNodeExecutor;
 import com.flowforge.engine.executors.NotificationNodeExecutor;
 import com.flowforge.engine.executors.StartNodeExecutor;
@@ -90,10 +93,15 @@ final class InMemoryEngineFixture {
     /** The routing seam the real executors will use, wired to the same in-memory graph. */
     final NodeTransitions transitions = new NodeTransitions(edgeRepository);
 
-    /** The real collaborators the task-17 executors are built from. */
+    /** The real collaborators the executors are built from. */
     final AssigneeResolver assigneeResolver = new AssigneeResolver(userRepository);
     final NotificationService notificationService =
             new InAppNotificationService(notificationRepository, userRepository);
+    final ConditionEvaluator conditionEvaluator = new ConditionEvaluator();
+
+    /** The ERROR transition, shared by the engine and the Condition executor. */
+    final InstanceErrorRecorder errorRecorder =
+            new InstanceErrorRecorder(instanceRepository, auditLogService);
 
     final User initiator = user("Ada Lovelace", "ada@example.com", "EMPLOYEE");
     final User manager = user("Grace Hopper", "grace@example.com", "MANAGER");
@@ -218,7 +226,8 @@ final class InMemoryEngineFixture {
                     instanceRepository,
                     userRepository,
                     new NodeExecutorFactory(List.copyOf(executors)),
-                    auditLogService);
+                    auditLogService,
+                    errorRecorder);
         }
         return engine;
     }
@@ -308,6 +317,22 @@ final class InMemoryEngineFixture {
         registerExecutor(endNodeExecutor());
         registerExecutor(taskNodeExecutor());
         registerExecutor(notificationNodeExecutor());
+    }
+
+    // ── the real task-18 executors ───────────────────────────────────────────────────────────────
+
+    ConditionNodeExecutor conditionNodeExecutor() {
+        return new ConditionNodeExecutor(transitions, conditionEvaluator, errorRecorder);
+    }
+
+    ApprovalNodeExecutor approvalNodeExecutor() {
+        return new ApprovalNodeExecutor(taskRepository, assigneeResolver, auditLogService);
+    }
+
+    /** Register the Condition and Approval executors task 18 delivers. */
+    void registerTask18Executors() {
+        registerExecutor(conditionNodeExecutor());
+        registerExecutor(approvalNodeExecutor());
     }
 
     /** The tasks raised for an instance, oldest first. */
