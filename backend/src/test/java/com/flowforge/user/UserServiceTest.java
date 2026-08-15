@@ -12,6 +12,7 @@ import com.flowforge.user.dto.UserResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,6 +27,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.spy;
 
 /**
  * Unit tests for {@link UserService}.
@@ -189,6 +193,34 @@ class UserServiceTest {
     void setAccountStatus_forUnknownUser_isRejectedWith404() {
         assertThatThrownBy(() -> userService.setAccountStatus(UUID.randomUUID(), false))
                 .isInstanceOf(EntityNotFoundException.class);
+    }
+
+    /**
+     * Revoking tokens is a bulk update that clears the persistence context, detaching the user — so
+     * the response has to be mapped before it runs. Against a real database, mapping afterwards
+     * fails on the user's lazy department with a LazyInitializationException and the endpoint answers
+     * 500 instead of 200. Mocked repositories cannot reproduce a detached proxy, so the ordering
+     * itself is what is pinned here.
+     */
+    @Test
+    void setAccountStatus_mapsTheResponseBeforeRevokingTokens() {
+        UserMapper mapper = spy(new UserMapperImpl());
+        UserService service = new UserService(
+                fixture.userRepository,
+                fixture.roleRepository,
+                fixture.departmentRepository,
+                fixture.refreshTokenRepository,
+                mapper,
+                fixture.passwordEncoder,
+                fixture.auditLogService);
+        User user = fixture.persistUser("Ada", "ada@example.com", PASSWORD, fixture.employeeRole, true);
+        fixture.persistRefreshToken(user, "token-1");
+
+        service.setAccountStatus(user.getId(), false);
+
+        InOrder order = inOrder(mapper, fixture.refreshTokenRepository);
+        order.verify(mapper).toResponse(any(User.class));
+        order.verify(fixture.refreshTokenRepository).revokeAllByUserId(user.getId());
     }
 
     @Test

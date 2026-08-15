@@ -138,6 +138,12 @@ public class UserService {
      * {@code JwtAuthenticationFilter} resolves the principal through
      * {@link UserRepository#findByIdAndIsActiveTrue(UUID)} on every request (Requirement 4.2).</p>
      *
+     * <p>The order below matters. {@link RefreshTokenRepository#revokeAllByUserId(UUID)} is a bulk
+     * update that clears the persistence context, which detaches {@code saved} — so the response and
+     * the audit snapshot are built <em>before</em> the revocation. Reading the user's lazy role or
+     * department after that point would fail, because a detached proxy has no session to initialize
+     * through.</p>
+     *
      * @throws EntityNotFoundException 404 when no such user exists
      */
     @Transactional
@@ -147,6 +153,9 @@ public class UserService {
 
         user.setIsActive(active);
         User saved = userRepository.save(user);
+
+        Map<String, Object> after = snapshot(saved);
+        UserResponse response = userMapper.toResponse(saved);
 
         if (!active) {
             int revoked = refreshTokenRepository.revokeAllByUserId(userId);
@@ -160,9 +169,9 @@ public class UserService {
                 AuditLogService.ENTITY_USER,
                 userId,
                 before,
-                snapshot(saved));
+                after);
 
-        return userMapper.toResponse(saved);
+        return response;
     }
 
     private User requireUser(UUID userId) {
