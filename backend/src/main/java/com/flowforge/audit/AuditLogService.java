@@ -43,6 +43,9 @@ public class AuditLogService {
     /** Entity type discriminator for {@link com.flowforge.task.Attachment} rows. */
     public static final String ENTITY_ATTACHMENT = "Attachment";
 
+    /** Entity type discriminator for {@link com.flowforge.task.Comment} rows. */
+    public static final String ENTITY_COMMENT = "Comment";
+
     public static final String ACTION_CREATE_USER = "CREATE_USER";
     public static final String ACTION_UPDATE_USER = "UPDATE_USER";
     public static final String ACTION_STATUS_CHANGE = "STATUS_CHANGE";
@@ -60,6 +63,7 @@ public class AuditLogService {
     public static final String ACTION_REJECT_TASK = "REJECT_TASK";
     public static final String ACTION_CANCEL_INSTANCE = "CANCEL_INSTANCE";
     public static final String ACTION_UPLOAD_ATTACHMENT = "UPLOAD_ATTACHMENT";
+    public static final String ACTION_POST_COMMENT = "POST_COMMENT";
 
     private final AuditLogRepository auditLogRepository;
 
