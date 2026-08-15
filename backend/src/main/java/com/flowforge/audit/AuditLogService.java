@@ -53,6 +53,9 @@ public class AuditLogService {
     public static final String ACTION_INSTANCE_COMPLETED = "INSTANCE_COMPLETED";
     public static final String ACTION_CREATE_TASK = "CREATE_TASK";
     public static final String ACTION_ESCALATE_TASK = "ESCALATE_TASK";
+    public static final String ACTION_APPROVE_TASK = "APPROVE_TASK";
+    public static final String ACTION_REJECT_TASK = "REJECT_TASK";
+    public static final String ACTION_CANCEL_INSTANCE = "CANCEL_INSTANCE";
 
     private final AuditLogRepository auditLogRepository;
 
