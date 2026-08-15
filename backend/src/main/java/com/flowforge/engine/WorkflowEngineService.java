@@ -59,9 +59,24 @@ import java.util.UUID;
  * notices that the position changed and keeps going. Sequential routing, condition routing and
  * parallel fan-out are therefore variations on one seam rather than three shapes of engine.
  *
- * <p>Task 16 delivers the core only. The individual executors arrive in tasks 17 and 18, and AND-Join
- * branch bookkeeping in task 19; until an executor bean exists for a node type,
- * {@link NodeExecutorFactory} throws rather than stalling an instance in silence.
+ * <h2>Parallel branches: the cursor model</h2>
+ * <p>{@code current_node_id} is a single column, so it cannot name two active nodes. The engine reads
+ * it as a <em>cursor</em> — where the engine is working at this instant — rather than as the sum of the
+ * instance's position (Requirements 10.1–10.3). Simultaneously active branches are represented beside
+ * it: a branch waiting on a person is its {@code tasks} row, a branch not yet walked and a branch that
+ * has reached a join are both entries in {@link BranchLedger}. That is why the advance loop below has
+ * two extra moves:
+ * <ul>
+ *   <li>a node that <b>fanned out</b> leaves the cursor where it is and registers a branch per outgoing
+ *       edge; the loop then walks those branches one at a time, each as far as it goes, so the branch
+ *       that pauses at a task does not stop the next branch from being activated;</li>
+ *   <li>the loop never re-executes a node that is sitting on unopened branches, since it has already
+ *       run and repeating it would repeat its side effects.</li>
+ * </ul>
+ * <p>The single cursor is why every entry point that mutates an existing instance loads it
+ * {@code FOR UPDATE}: two branches completing at the same moment would otherwise read the same
+ * {@code branch_status}, each write back its own arrival and lose the other's, and the join would wait
+ * for a branch that had already finished. See {@link #advanceFrom}.
  */
 @Service
 @RequiredArgsConstructor
@@ -83,6 +98,8 @@ public class WorkflowEngineService {
     private final WorkflowInstanceRepository instanceRepository;
     private final UserRepository userRepository;
     private final NodeExecutorFactory executorFactory;
+    private final NodeTransitions transitions;
+    private final BranchLedger branchLedger;
     private final AuditLogService auditLogService;
     private final InstanceErrorRecorder errorRecorder;
 
@@ -134,7 +151,7 @@ public class WorkflowEngineService {
     }
 
     /**
-     * Advance an instance by id, loading it first.
+     * Advance an instance by id, loading and locking it first.
      *
      * @param instanceId the instance to advance
      * @return the instance after advancing
@@ -143,6 +160,55 @@ public class WorkflowEngineService {
     @Transactional
     public WorkflowInstance advance(UUID instanceId) {
         return advance(requireInstance(instanceId));
+    }
+
+    /**
+     * Report that the work at one node is finished, and carry on from there (Requirement 10.3).
+     *
+     * <p>This is how a branch completes. The cursor may well be somewhere else — parked on another
+     * branch's task, or on a join waiting for this very branch — so the node is named explicitly rather
+     * than assumed to be where the instance is sitting: the cursor is moved onto it, the node is left
+     * along its outgoing edge (or fanned out, if it has several), and the ordinary advance loop takes
+     * over. A branch that leads to an AND-Join therefore records its arrival on the way in, and the join
+     * fires only for whichever branch happens to be last (Requirement 10.2). Task 21's decision handler
+     * is the intended caller, with the node of the task just decided.
+     *
+     * <p>The node's own action is not re-executed — the point is that it is done.
+     *
+     * <h2>Two branches at once</h2>
+     * <p>The instance row is loaded {@code FOR UPDATE}, so concurrent completions of two branches
+     * serialise on it: the second waits for the first to commit and then reads a {@code branch_status}
+     * that already contains the first branch's arrival. Without that, both would read the same state,
+     * each write back only its own arrival, and the join would sit forever waiting for a branch that had
+     * already reported. A pessimistic lock rather than a {@code @Version} column because the whole of an
+     * advance is a read-modify-write of this one row: serialising it needs no retry loop, no schema
+     * change, and no re-running of node side effects.
+     *
+     * <p>It is the caller's job not to report the same branch twice; the decision path enforces that
+     * through the task's own status, which can only move out of PENDING once.
+     *
+     * @param instanceId      the instance whose branch completed
+     * @param completedNodeId the node whose work is finished
+     * @return the instance after advancing
+     * @throws EntityNotFoundException 404 when the instance or the node does not exist
+     * @throws AppException            500 when the node does not belong to the instance's definition
+     */
+    @Transactional
+    public WorkflowInstance advanceFrom(UUID instanceId, UUID completedNodeId) {
+        WorkflowInstance instance = requireInstance(instanceId);
+        if (instance.getStatus() == null || instance.getStatus().isTerminal()) {
+            log.debug("Instance {} is {}; node {} has nothing left to advance",
+                    instanceId, instance.getStatus(), completedNodeId);
+            return instance;
+        }
+
+        WorkflowNode completed = requireNodeOfDefinition(instance, completedNodeId);
+        log.info("Instance {} resumes: work at node {} ({}) is complete",
+                instanceId, completed.getId(), completed.getType());
+
+        transitions.moveTo(instance, completed);
+        transitions.followOutgoingEdges(instance, completed);
+        return advance(instanceRepository.save(instance));
     }
 
     /**
@@ -178,6 +244,13 @@ public class WorkflowEngineService {
                         HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
+            // The cursor sits on a node that has already fanned out: walk its next branch rather than
+            // executing it a second time (Requirement 10.1).
+            if (openNextBranch(current, node.getId())) {
+                current = instanceRepository.save(current);
+                continue;
+            }
+
             UUID nodeBefore = node.getId();
             executorFactory.executorFor(node.getType()).execute(current, node);
 
@@ -191,7 +264,15 @@ public class WorkflowEngineService {
                 return current;
             }
             if (Objects.equals(nodeBefore, current.currentNodeId())) {
-                // The executor is waiting on something external — a task decision, a branch.
+                // The node did not move the cursor. Either it just fanned out, or it is waiting on
+                // something external — a task decision, a branch that has not arrived. Any branch still
+                // unopened is work this call can do now, wherever it fans out from: that is what makes
+                // the second branch of a fan-out active even though the first is parked on a task
+                // (Requirement 10.1).
+                if (openNextBranch(current, null)) {
+                    current = instanceRepository.save(current);
+                    continue;
+                }
                 log.debug("Instance {} is waiting at node {} ({})",
                         current.getId(), nodeBefore, node.getType());
                 return current;
@@ -224,6 +305,30 @@ public class WorkflowEngineService {
     @Transactional
     public WorkflowInstance markError(WorkflowInstance instance, String reason) {
         return errorRecorder.markError(instance, reason);
+    }
+
+    // ── parallel-branch helpers ───────────────────────────────────────────────────────────────────
+
+    /**
+     * Walk the next registered-but-not-yet-opened branch, if any.
+     *
+     * <p>When a node has fanned out it registered one branch per outgoing edge in
+     * {@link BranchLedger}. The advance loop calls this to pop and open those branches one at a
+     * time, still inside the same transaction. Each branch is opened by moving the cursor onto the
+     * node the fan-out edge leads to — which is what makes the engine re-enter the loop body with
+     * a new current node.
+     *
+     * @param instance   the instance to read and possibly mutate
+     * @param forkNodeId the specific fan-out node to pull from, or {@code null} for any
+     * @return {@code true} when a branch was opened, {@code false} when there were none
+     */
+    private boolean openNextBranch(WorkflowInstance instance, UUID forkNodeId) {
+        return branchLedger.takeNextPendingBranch(instance, forkNodeId)
+                .map(branch -> {
+                    transitions.followEdgeFrom(instance, branch.forkNodeId(), branch.edgeId());
+                    return true;
+                })
+                .orElse(false);
     }
 
     // ── lookups ──────────────────────────────────────────────────────────────────────────────────
@@ -262,9 +367,42 @@ public class WorkflowEngineService {
         return starts.getFirst();
     }
 
+    /**
+     * Load an instance the caller is about to mutate, locking its row for the rest of the transaction
+     * so two branches completing at once cannot overwrite each other's arrival (Requirement 10.3).
+     */
     private WorkflowInstance requireInstance(UUID instanceId) {
-        return instanceRepository.findById(instanceId)
+        return instanceRepository.findByIdForUpdate(instanceId)
                 .orElseThrow(() -> new EntityNotFoundException("Workflow instance", instanceId));
+    }
+
+    /**
+     * Verify that a node belongs to the definition this instance is executing.
+     *
+     * <p>Called when an external event (a task decision) names a node: the engine must not allow
+     * it to name a node from a different version, whether because a bug smuggled in a wrong id or
+     * because two instances share nodes in some unexpected way.</p>
+     *
+     * @param instance        the executing instance
+     * @param completedNodeId the node being claimed as finished
+     * @return the node
+     * @throws EntityNotFoundException 404 when the node does not exist
+     * @throws AppException            500 when the node belongs to a different version
+     */
+    private WorkflowNode requireNodeOfDefinition(WorkflowInstance instance, UUID completedNodeId) {
+        return nodeRepository.findById(completedNodeId)
+                .map(node -> {
+                    UUID nodeVersionId = node.getVersion() == null ? null : node.getVersion().getId();
+                    if (!instance.workflowVersionId().equals(nodeVersionId)) {
+                        throw new AppException(
+                                "Node %s belongs to version %s, not to the version %s of instance %s"
+                                        .formatted(completedNodeId, nodeVersionId,
+                                                instance.workflowVersionId(), instance.getId()),
+                                HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+                    return node;
+                })
+                .orElseThrow(() -> new EntityNotFoundException("Workflow node", completedNodeId));
     }
 
     /**

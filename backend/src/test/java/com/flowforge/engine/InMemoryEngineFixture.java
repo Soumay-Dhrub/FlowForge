@@ -3,6 +3,7 @@ package com.flowforge.engine;
 import com.flowforge.audit.AuditLog;
 import com.flowforge.audit.AuditLogRepository;
 import com.flowforge.audit.AuditLogService;
+import com.flowforge.engine.executors.AndJoinNodeExecutor;
 import com.flowforge.engine.executors.ApprovalNodeExecutor;
 import com.flowforge.engine.executors.AssigneeResolver;
 import com.flowforge.engine.executors.ConditionEvaluator;
@@ -90,8 +91,11 @@ final class InMemoryEngineFixture {
 
     private final List<NodeExecutor> executors = new ArrayList<>();
 
+    /** The parallel-branch bookkeeping, shared by the routing seam, the engine and the AND-Join. */
+    final BranchLedger branchLedger = new BranchLedger();
+
     /** The routing seam the real executors will use, wired to the same in-memory graph. */
-    final NodeTransitions transitions = new NodeTransitions(edgeRepository);
+    final NodeTransitions transitions = new NodeTransitions(edgeRepository, branchLedger);
 
     /** The real collaborators the executors are built from. */
     final AssigneeResolver assigneeResolver = new AssigneeResolver(userRepository);
@@ -117,6 +121,9 @@ final class InMemoryEngineFixture {
                         .filter(version -> version.getWorkflow().getId().equals(call.<UUID>getArgument(0)))
                         .filter(version -> Boolean.TRUE.equals(version.getIsCurrent()))
                         .findFirst());
+
+        when(nodeRepository.findById(any(UUID.class)))
+                .thenAnswer(call -> Optional.ofNullable(nodesById.get(call.<UUID>getArgument(0))));
 
         when(nodeRepository.findByVersionIdAndType(any(UUID.class), any(NodeType.class)))
                 .thenAnswer(call -> nodesById.values().stream()
@@ -144,6 +151,10 @@ final class InMemoryEngineFixture {
             return instance;
         });
         when(instanceRepository.findById(any(UUID.class)))
+                .thenAnswer(call -> Optional.ofNullable(instancesById.get(call.<UUID>getArgument(0))));
+        // The engine reads through the locking finder; in-memory there is nothing to lock, so it
+        // answers from the same map.
+        when(instanceRepository.findByIdForUpdate(any(UUID.class)))
                 .thenAnswer(call -> Optional.ofNullable(instancesById.get(call.<UUID>getArgument(0))));
 
         when(userRepository.findById(any(UUID.class)))
@@ -226,6 +237,8 @@ final class InMemoryEngineFixture {
                     instanceRepository,
                     userRepository,
                     new NodeExecutorFactory(List.copyOf(executors)),
+                    transitions,
+                    branchLedger,
                     auditLogService,
                     errorRecorder);
         }
@@ -333,6 +346,17 @@ final class InMemoryEngineFixture {
     void registerTask18Executors() {
         registerExecutor(conditionNodeExecutor());
         registerExecutor(approvalNodeExecutor());
+    }
+
+    // ── the real task-19 executor ────────────────────────────────────────────────────────────────
+
+    AndJoinNodeExecutor andJoinNodeExecutor() {
+        return new AndJoinNodeExecutor(transitions, branchLedger);
+    }
+
+    /** Register the AND-Join executor task 19 delivers, completing all seven node types. */
+    void registerTask19Executors() {
+        registerExecutor(andJoinNodeExecutor());
     }
 
     /** The tasks raised for an instance, oldest first. */

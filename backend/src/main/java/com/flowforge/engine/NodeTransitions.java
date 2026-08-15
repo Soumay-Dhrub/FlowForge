@@ -1,6 +1,7 @@
 package com.flowforge.engine;
 
 import com.flowforge.common.exception.AppException;
+import com.flowforge.workflow.NodeType;
 import com.flowforge.workflow.WorkflowEdge;
 import com.flowforge.workflow.WorkflowNode;
 import com.flowforge.workflow.WorkflowEdgeRepository;
@@ -10,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * How an instance moves along the graph — the one place a transition is decided and applied
@@ -23,13 +26,29 @@ import java.util.List;
  *
  * <h2>What each caller uses</h2>
  * <ul>
- *   <li><b>Sequential nodes</b> (Start, Notification, and Task/Approval once a decision arrives)
- *       call {@link #followSoleOutgoingEdge} — exactly one way out, take it.</li>
+ *   <li><b>Sequential nodes</b> (Start, Notification, the AND-Join once it fires, and Task/Approval
+ *       once a decision arrives) call {@link #followOutgoingEdges} — take the one way out, or fan out
+ *       if the designer drew several (Requirement 10.1). {@link #followSoleOutgoingEdge} is the
+ *       stricter form, for a caller that will not accept a fan-out.</li>
  *   <li><b>Condition nodes</b> call {@link #outgoingEdges} and pick the first edge whose expression
  *       holds, then {@link #follow} it (Requirements 9.4, 9.5). Evaluating the expression is the
- *       executor's business, not this class's.</li>
- *   <li><b>Fan-out and AND-Join</b> call {@link #outgoingEdges} and {@link #inboundEdges} — the
- *       branches to open, and the branches a join must wait for (Requirements 10.1–10.3).</li>
+ *       executor's business, not this class's. A Condition node chooses one edge and therefore never
+ *       fans out, however many edges it has.</li>
+ *   <li><b>AND-Join</b> calls {@link #inboundEdges} — the branches a join must wait for
+ *       (Requirement 10.2).</li>
+ * </ul>
+ *
+ * <h2>Fan-out and arrival</h2>
+ * <p>Both halves of parallel execution are edge facts, so both are recorded here rather than in the
+ * executors:
+ * <ul>
+ *   <li>{@link #followOutgoingEdges} on a node with several exits registers a branch per edge in
+ *       {@link BranchLedger} and leaves the instance where it is. The position does not change because
+ *       there is no single position to change it to — the engine picks the branches up and walks them
+ *       one at a time.</li>
+ *   <li>{@link #follow} into an AND-Join records that branch's completion against the edge it arrived
+ *       on (Requirement 10.3). This is the one place an edge is traversed, and "which branch arrived"
+ *       is exactly "which edge was traversed" — a join executor handed only its node could not tell.</li>
  * </ul>
  *
  * <p>Nothing here is transactional on its own: it reads the frozen definition and mutates the
@@ -43,18 +62,31 @@ import java.util.List;
 public class NodeTransitions {
 
     private final WorkflowEdgeRepository edgeRepository;
+    private final BranchLedger branchLedger;
 
     /**
      * The ways out of a node, in the graph's authored order.
      *
      * <p>Order is what makes a Condition node deterministic: its edges are evaluated in this
-     * sequence and the first match wins (Requirement 9.4).
+     * sequence and the first match wins (Requirement 9.4). It is also the order parallel branches are
+     * opened in (Requirement 10.1).
      *
      * @param node the node to read the outgoing edges of
      * @return the outgoing edges, possibly empty (an End node has none)
      */
     public List<WorkflowEdge> outgoingEdges(WorkflowNode node) {
-        return edgeRepository.findBySourceNodeIdOrderByCreatedAtAscIdAsc(requireNode(node).getId());
+        return outgoingEdges(requireNode(node).getId());
+    }
+
+    /**
+     * The ways out of a node known only by id — how a branch registered earlier is resolved back to
+     * the edge that is that branch.
+     *
+     * @param nodeId the node to read the outgoing edges of
+     * @return the outgoing edges, possibly empty
+     */
+    public List<WorkflowEdge> outgoingEdges(UUID nodeId) {
+        return edgeRepository.findBySourceNodeIdOrderByCreatedAtAscIdAsc(nodeId);
     }
 
     /**
@@ -81,7 +113,59 @@ public class NodeTransitions {
                     "Cannot advance instance " + instance.getId() + " along a null edge",
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return moveTo(instance, edge.getTargetNode());
+        WorkflowNode target = moveTo(instance, edge.getTargetNode());
+        if (target.getType() == NodeType.AND_JOIN) {
+            // This branch has delivered. Which one it was is the edge, not the node it came from
+            // (Requirement 10.3).
+            branchLedger.recordArrival(instance, edge.getId());
+        }
+        return target;
+    }
+
+    /**
+     * Leave a node the ordinary way: along its single outgoing edge, or — when the designer drew
+     * several — by fanning out into a branch per edge (Requirement 10.1).
+     *
+     * <p>This is what every sequential executor calls. The fan-out case deliberately does not move the
+     * instance: several targets are now active and one {@code current_node_id} cannot name them all, so
+     * the branches are registered in {@link BranchLedger} and
+     * {@link WorkflowEngineService#advance(WorkflowInstance)} walks them one at a time. An executor
+     * therefore needs to know nothing about parallelism — it says "I am done here" and the same call
+     * covers both shapes.
+     *
+     * @param instance the instance to move
+     * @param node     the node it is leaving
+     * @return the node it moved to, or empty when it fanned out and stayed put
+     * @throws AppException 500 when the node has no outgoing edge at all
+     */
+    public Optional<WorkflowNode> followOutgoingEdges(WorkflowInstance instance, WorkflowNode node) {
+        List<WorkflowEdge> outgoing = outgoingEdges(node);
+        if (outgoing.size() > 1) {
+            branchLedger.registerFanOut(instance, node, outgoing);
+            return Optional.empty();
+        }
+        return Optional.of(followSole(instance, node, outgoing));
+    }
+
+    /**
+     * Traverse one specific outgoing edge of a node, identified by id — how the engine opens a branch
+     * it registered earlier.
+     *
+     * @param instance     the instance to move
+     * @param sourceNodeId the node the branch fans out from
+     * @param edgeId       the outgoing edge that is the branch
+     * @return the node the instance now sits on
+     * @throws AppException 500 when that node has no such outgoing edge
+     */
+    public WorkflowNode followEdgeFrom(WorkflowInstance instance, UUID sourceNodeId, UUID edgeId) {
+        return outgoingEdges(sourceNodeId).stream()
+                .filter(edge -> edge.getId().equals(edgeId))
+                .findFirst()
+                .map(edge -> follow(instance, edge))
+                .orElseThrow(() -> new AppException(
+                        "Edge %s is not an outgoing edge of node %s; instance %s cannot open that branch"
+                                .formatted(edgeId, sourceNodeId, instance.getId()),
+                        HttpStatus.INTERNAL_SERVER_ERROR));
     }
 
     /**
@@ -99,7 +183,11 @@ public class NodeTransitions {
      * @throws AppException 500 when the node does not have exactly one outgoing edge
      */
     public WorkflowNode followSoleOutgoingEdge(WorkflowInstance instance, WorkflowNode node) {
-        List<WorkflowEdge> outgoing = outgoingEdges(node);
+        return followSole(instance, node, outgoingEdges(node));
+    }
+
+    private WorkflowNode followSole(
+            WorkflowInstance instance, WorkflowNode node, List<WorkflowEdge> outgoing) {
         if (outgoing.size() != 1) {
             throw new AppException(
                     "Node %s (%s) has %d outgoing edges; a sequential transition requires exactly one"

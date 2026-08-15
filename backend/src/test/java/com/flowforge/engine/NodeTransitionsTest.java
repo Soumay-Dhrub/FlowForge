@@ -46,7 +46,9 @@ class NodeTransitionsTest {
                         .filter(edge -> edge.getTargetNode().getId().equals(call.<UUID>getArgument(0)))
                         .toList());
 
-        transitions = new NodeTransitions(edgeRepository);
+        // A real ledger rather than a mock: it is stateless bookkeeping over the instance's own
+        // branch_status map, so using the genuine article keeps arrival recording honest.
+        transitions = new NodeTransitions(edgeRepository, new BranchLedger());
         version = WorkflowVersion.builder().id(UUID.randomUUID()).versionNumber(1).build();
         instance = WorkflowInstance.builder()
                 .id(UUID.randomUUID())
