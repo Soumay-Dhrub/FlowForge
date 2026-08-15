@@ -22,7 +22,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Copy, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, Loader2, Pencil } from "lucide-react";
 import { extractErrorMessage, isForbiddenError, isStatusError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import {
@@ -137,10 +137,22 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
         ← Workflows
       </Link>
 
-      <h1 className="mt-2 text-2xl font-bold text-primary-700">{definition.name}</h1>
-      {definition.description ? (
-        <p className="mt-1 text-sm text-gray-600">{definition.description}</p>
-      ) : null}
+      <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-primary-700">{definition.name}</h1>
+          {definition.description ? (
+            <p className="mt-1 text-sm text-gray-600">{definition.description}</p>
+          ) : null}
+        </div>
+        {/* The builder edits the newest unpublished version; it says so itself when there is none. */}
+        <Link
+          href={`/workflows/${definition.id}/edit`}
+          className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        >
+          <Pencil aria-hidden="true" className="h-4 w-4" />
+          Open builder
+        </Link>
+      </div>
       <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
         <div>
           <dt className="text-gray-500">Status</dt>

@@ -78,7 +78,20 @@ export interface Workflow {
   versions: WorkflowVersion[] | null;
 }
 
-export type NodeType = "START" | "TASK" | "APPROVAL" | "CONDITION" | "NOTIFICATION" | "END";
+/**
+ * Mirrors the backend `NodeType` enum, including `AND_JOIN`.
+ *
+ * The synchronisation node is part of the set the engine executes and the builder must be able to
+ * place it: without it a parallel workflow can be drawn but never joined (Requirement 10.2).
+ */
+export type NodeType =
+  | "START"
+  | "TASK"
+  | "APPROVAL"
+  | "CONDITION"
+  | "NOTIFICATION"
+  | "AND_JOIN"
+  | "END";
 
 /** Mirrors the backend `WorkflowVersionResponse`. */
 export interface WorkflowVersion {
