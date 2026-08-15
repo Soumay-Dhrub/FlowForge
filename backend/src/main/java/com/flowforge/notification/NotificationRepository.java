@@ -9,8 +9,7 @@ import java.util.UUID;
 /**
  * Repository for Notification entity operations.
  *
- * <p>Only the finders the current callers need. Task 26 adds the listing endpoint's ordering
- * (unread first, then newest — Requirement 18.3) and the read-status update.
+ * <p>Only the finders the current callers need.
  */
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
@@ -20,4 +19,17 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
     /** A user's unread notifications, newest first; served by the {@code (user_id, is_read)} index. */
     List<Notification> findByUser_IdAndIsReadFalseOrderByCreatedAtDesc(UUID userId);
+
+    /**
+     * A user's notifications as the inbox reads them: unread first, then newest
+     * (Requirement 18.3).
+     *
+     * <p>{@code is_read} ascending is what puts unread first — {@code false} sorts before
+     * {@code true} — rather than a separate query per read state, so the two groups arrive already
+     * interleaved in one page and the caller does not have to merge them.
+     */
+    List<Notification> findByUser_IdOrderByIsReadAscCreatedAtDesc(UUID userId);
+
+    /** How many of a user's notifications are unread; drives the bell's badge. */
+    long countByUser_IdAndIsReadFalse(UUID userId);
 }
