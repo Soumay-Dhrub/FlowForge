@@ -139,6 +139,21 @@ export function unwrap<T>(response: AxiosResponse<ApiResponse<T>>): T {
   return body.data;
 }
 
+/** True when the request failed with the given HTTP status. */
+export function isStatusError(error: unknown, status: number): boolean {
+  return axios.isAxiosError(error) && error.response?.status === status;
+}
+
+/**
+ * True for "you are authenticated, but not allowed to do this" (Requirement 3.2).
+ *
+ * Pages use this to draw a deliberate "not authorized" state instead of leaking a raw error: a
+ * MANAGER who types `/users` in the address bar has made an understandable mistake, not hit a bug.
+ */
+export function isForbiddenError(error: unknown): boolean {
+  return isStatusError(error, 403);
+}
+
 /**
  * Best available human-readable message for a failed request. The backend already returns
  * user-safe copy in `message` (for example the deliberately generic "Invalid email or password"),

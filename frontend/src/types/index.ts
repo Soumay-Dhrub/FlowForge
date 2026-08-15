@@ -46,28 +46,72 @@ export interface Notification {
   createdAt: string;
 }
 
+/** Options for the role selector, from `GET /api/roles`. */
+export interface RoleOption {
+  id: string;
+  name: string;
+}
+
+/** Options for the department selector, from `GET /api/departments`. */
+export interface DepartmentOption {
+  id: string;
+  name: string;
+}
+
+export type WorkflowStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+
+/**
+ * Mirrors the backend `WorkflowResponse`.
+ *
+ * `versions` is `null` on list responses and populated only by `GET /api/workflows/{id}`, so the
+ * version history is not loaded for every row of the workflow table (Requirement 8.3).
+ */
 export interface Workflow {
   id: string;
   name: string;
-  description?: string;
-  status: "DRAFT" | "ACTIVE" | "ARCHIVED";
-  createdBy: string;
+  description: string | null;
+  status: WorkflowStatus;
+  createdById: string;
+  createdByName: string | null;
   createdAt: string;
+  updatedAt: string;
+  versions: WorkflowVersion[] | null;
 }
 
 export type NodeType = "START" | "TASK" | "APPROVAL" | "CONDITION" | "NOTIFICATION" | "END";
 
-export interface WorkflowNode {
+/** Mirrors the backend `WorkflowVersionResponse`. */
+export interface WorkflowVersion {
   id: string;
-  type: NodeType;
-  positionX: number;
-  positionY: number;
-  config: Record<string, unknown>;
+  workflowId: string;
+  versionNumber: number;
+  graphJson: Record<string, unknown> | null;
+  isPublished: boolean;
+  isCurrent: boolean;
+  publishedAt: string | null;
+  publishedById: string | null;
+  publishedByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  nodes: WorkflowNode[] | null;
+  edges: WorkflowEdge[] | null;
 }
 
+/** Mirrors the backend `WorkflowNodeResponse`. */
+export interface WorkflowNode {
+  id: string;
+  versionId: string;
+  type: NodeType;
+  configJson: Record<string, unknown> | null;
+  positionX: number | null;
+  positionY: number | null;
+}
+
+/** Mirrors the backend `WorkflowEdgeResponse`. */
 export interface WorkflowEdge {
   id: string;
+  versionId: string;
   sourceNodeId: string;
   targetNodeId: string;
-  condition?: string;
+  conditionExpr: string | null;
 }
