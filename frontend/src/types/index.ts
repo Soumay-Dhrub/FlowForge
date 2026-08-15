@@ -31,6 +31,21 @@ export interface TokenPair {
   expiresIn: number;
 }
 
+/**
+ * Mirrors the backend `NotificationResponse` returned by `GET /api/notifications`.
+ *
+ * `eventType` is a plain string rather than a union: the column is a free-form `VARCHAR(50)` and a
+ * workflow's Notification node may emit a designer-defined type, so the UI must render one it has
+ * never seen. {@link NOTIFICATION_EVENT_LABELS} maps the ones the platform raises itself.
+ */
+export interface Notification {
+  id: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface Workflow {
   id: string;
   name: string;

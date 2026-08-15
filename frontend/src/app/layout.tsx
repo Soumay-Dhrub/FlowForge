@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/context/AuthContext";
+import QueryProvider from "@/components/providers/QueryProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +16,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        {/* Query cache outside the session provider: a logout swaps the user, and the cache must
+            already exist for the shell's queries to be cancelled and refetched cleanly. */}
+        <QueryProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );
