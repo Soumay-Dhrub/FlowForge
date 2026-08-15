@@ -10,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -41,6 +42,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleApp(AppException ex) {
         return ResponseEntity.status(ex.getStatus())
                 .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
+     * An upload the servlet container refused before application code saw it (Requirement 14.2).
+     *
+     * <p>{@code spring.servlet.multipart.max-file-size} stops Tomcat reading past its own ceiling, which
+     * is what keeps a hostile multi-gigabyte body from reaching the heap at all. The status is the same
+     * 413 {@code AttachmentService} returns, so a client cannot tell — and does not need to tell — which
+     * of the two limits stopped it.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUploadTooLarge(MaxUploadSizeExceededException ex) {
+        log.warn("Upload rejected by the container's multipart limit: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiResponse.error("The uploaded file is too large"));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
