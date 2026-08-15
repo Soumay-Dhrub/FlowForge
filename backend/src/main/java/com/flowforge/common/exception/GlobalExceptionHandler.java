@@ -1,6 +1,7 @@
 package com.flowforge.common.exception;
 
 import com.flowforge.common.response.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,6 +16,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.util.List;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -63,8 +65,18 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Resource not found"));
     }
 
+    /**
+     * Anything unclassified.
+     *
+     * <p>The response stays deliberately vague — an internal failure must not leak a stack trace, a
+     * SQL statement or a host name to the caller. The log does not: a 500 that leaves no trace on the
+     * server is undebuggable, and the whole point of reaching this handler is that nobody predicted
+     * the failure, so the stack trace is the only evidence there is.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
+        log.error("Unhandled {} escaped to the API boundary: {}",
+                ex.getClass().getName(), ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("An unexpected error occurred"));
     }
