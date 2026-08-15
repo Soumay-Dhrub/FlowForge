@@ -52,6 +52,7 @@ public class AuditLogService {
     public static final String ACTION_INSTANCE_ERROR = "INSTANCE_ERROR";
     public static final String ACTION_INSTANCE_COMPLETED = "INSTANCE_COMPLETED";
     public static final String ACTION_CREATE_TASK = "CREATE_TASK";
+    public static final String ACTION_ESCALATE_TASK = "ESCALATE_TASK";
 
     private final AuditLogRepository auditLogRepository;
 
