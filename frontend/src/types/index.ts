@@ -128,3 +128,67 @@ export interface WorkflowEdge {
   targetNodeId: string;
   conditionExpr: string | null;
 }
+
+/**
+ * Mirrors the backend `TaskStatus` enum.
+ *
+ * Only `PENDING` and `ESCALATED` can still be decided — the service answers 409 for anything else —
+ * so this union is what the detail page reads to decide between a form and a read-only record.
+ */
+export type TaskStatus = "PENDING" | "COMPLETED" | "DELEGATED" | "ESCALATED" | "CANCELLED";
+
+/**
+ * Mirrors the backend `Decision` enum.
+ *
+ * Deliberately has no "undecided" member: a task with no decision carries `null`, which keeps a
+ * pending task distinguishable from an abstention.
+ */
+export type Decision = "APPROVED" | "REJECTED";
+
+/**
+ * Mirrors the backend `TaskResponse`.
+ *
+ * Flattened the same way the API flattens it: the workflow's name and the node's label travel with
+ * the task so a queue can be read without a request per row.
+ */
+export interface Task {
+  id: string;
+  instanceId: string;
+  workflowId: string;
+  workflowName: string;
+  nodeId: string;
+  nodeType: NodeType;
+  nodeLabel: string | null;
+  assignedToId: string;
+  status: TaskStatus;
+  /** The timeout deadline, or `null` when the node configures none. */
+  dueAt: string | null;
+  decision: Decision | null;
+  comment: string | null;
+  createdAt: string;
+}
+
+/** Mirrors the backend `InstanceStatus` enum. */
+export type InstanceStatus = "RUNNING" | "COMPLETED" | "REJECTED" | "ERROR" | "CANCELLED";
+
+/**
+ * Mirrors the backend `WorkflowInstanceResponse`.
+ *
+ * `requestData` is the submitted payload and an open map — the shape is whatever the requester sent,
+ * so consumers must render it generically rather than expect particular keys. It is populated only by
+ * `GET /api/instances/{id}`; list responses carry `null`.
+ */
+export interface WorkflowInstance {
+  id: string;
+  workflowId: string;
+  workflowName: string;
+  workflowVersionId: string;
+  versionNumber: number | null;
+  initiatedById: string;
+  initiatorName: string | null;
+  status: InstanceStatus;
+  currentNodeId: string | null;
+  requestData: Record<string, unknown> | null;
+  startedAt: string;
+  completedAt: string | null;
+}
