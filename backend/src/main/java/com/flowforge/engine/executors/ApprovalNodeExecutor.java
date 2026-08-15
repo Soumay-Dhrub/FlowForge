@@ -7,7 +7,9 @@ import com.flowforge.task.Task;
 import com.flowforge.task.TaskRepository;
 import com.flowforge.task.TaskStatus;
 import com.flowforge.user.User;
+import com.flowforge.workflow.NodeConfigRule;
 import com.flowforge.workflow.NodeType;
+import com.flowforge.workflow.WorkflowEdge;
 import com.flowforge.workflow.WorkflowNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -63,7 +66,7 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ApprovalNodeExecutor implements NodeExecutor {
+public class ApprovalNodeExecutor implements NodeExecutor, NodeConfigRule {
 
     /** Config key naming a specific approver by user id. */
     public static final String CONFIG_APPROVER_USER_ID = "approverUserId";
@@ -147,5 +150,25 @@ public class ApprovalNodeExecutor implements NodeExecutor {
         state.put("status", task.getStatus() == null ? null : task.getStatus().name());
         state.put("dueAt", task.getDueAt() == null ? null : task.getDueAt().toString());
         return state;
+    }
+
+    /**
+     * An Approval node must know who decides, and its timeout must be a usable number
+     * (Requirements 7.5, 11.1).
+     *
+     * <p>This is the rule the Phase 4 checkpoint went looking for: a node naming no approver passed all
+     * four structural rules, published, and then failed every request that reached it — by which point
+     * the version was frozen and the person seeing the error could do nothing about it.
+     */
+    @Override
+    public List<String> violations(WorkflowNode node, List<WorkflowEdge> outgoingEdges) {
+        List<String> violations = new ArrayList<>(NodeConfigChecks.requireUserOrRole(
+                node, CONFIG_APPROVER_USER_ID, CONFIG_APPROVER_ROLE, "approver"));
+        // A key that is present and parseable can still name nobody, which fails just as hard.
+        assigneeResolver.validateAssigneeReference(node, CONFIG_APPROVER_USER_ID)
+                .ifPresent(violations::add);
+        violations.addAll(
+                NodeConfigChecks.parseable(() -> NodeConfig.positiveLong(node, CONFIG_TIMEOUT_MINUTES)));
+        return List.copyOf(violations);
     }
 }

@@ -4,6 +4,7 @@ import com.flowforge.engine.InstanceErrorRecorder;
 import com.flowforge.engine.NodeExecutor;
 import com.flowforge.engine.NodeTransitions;
 import com.flowforge.engine.WorkflowInstance;
+import com.flowforge.workflow.NodeConfigRule;
 import com.flowforge.workflow.NodeType;
 import com.flowforge.workflow.WorkflowEdge;
 import com.flowforge.workflow.WorkflowNode;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,7 +44,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ConditionNodeExecutor implements NodeExecutor {
+public class ConditionNodeExecutor implements NodeExecutor, NodeConfigRule {
 
     private final NodeTransitions transitions;
     private final ConditionEvaluator conditionEvaluator;
@@ -74,6 +76,36 @@ public class ConditionNodeExecutor implements NodeExecutor {
         }
 
         errorRecorder.markError(instance, noMatchReason(node, outgoing));
+    }
+
+    /**
+     * A Condition node routes by expression, so both halves have to be there at publish time: somewhere
+     * to route to, and expressions that actually parse (Requirements 7.5, 9.4).
+     *
+     * <p>Two things are checked and one deliberately is not. A node with no outgoing edge cannot route
+     * anything and errors every instance that reaches it. An expression that will not compile does the
+     * same, and it is checkable now — {@link ConditionEvaluator#validate} parses it without needing
+     * request data. What is <em>not</em> checked is whether some edge will match at runtime: that
+     * depends on the payload, so "no edge matched" stays an execution-time ERROR (Requirement 9.5)
+     * rather than something publish could have predicted.
+     *
+     * <p>A node whose last edge carries no expression has an unconditional fallback and can never fail
+     * to route. That is good practice rather than a requirement, so it is not enforced here.
+     */
+    @Override
+    public List<String> violations(WorkflowNode node, List<WorkflowEdge> outgoingEdges) {
+        List<String> violations = new ArrayList<>();
+
+        if (outgoingEdges.isEmpty()) {
+            violations.add(("Condition node %s (%s) has no outgoing edges, so no instance reaching it "
+                    + "could ever be routed").formatted(node.getId(), node.getType()));
+        }
+
+        for (WorkflowEdge edge : outgoingEdges) {
+            conditionEvaluator.validate(node, edge).ifPresent(violations::add);
+        }
+
+        return List.copyOf(violations);
     }
 
     /**

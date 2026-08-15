@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Decides whether one edge's condition expression holds for one instance's request data
@@ -113,6 +114,37 @@ public class ConditionEvaluator {
         throw defect(node, edge, expression, result == null
                 ? "evaluated to null; a condition must evaluate to true or false"
                 : "evaluated to a %s, not a boolean".formatted(result.getClass().getSimpleName()));
+    }
+
+    /**
+     * Whether an edge's condition is syntactically usable, without running it (Requirement 7.5).
+     *
+     * <p>Publish-time counterpart to {@link #matches}. Only parsing is checked, because that is all
+     * that can be known without a payload: whether the expression <em>holds</em> depends on the request,
+     * and an expression referring to a key no request happens to carry is not a defect — SpEL reads a
+     * missing map key as null, which is a legitimate way to write "unset means no".
+     *
+     * <p>Returns the violation rather than throwing, because this exists to produce the sentence a
+     * designer reads. The message is the same one {@link #matches} would raise at runtime, so the two
+     * cannot describe the same fault differently.
+     *
+     * @param node the condition node the edge leaves
+     * @param edge the edge whose expression to check
+     * @return the violation, or empty when the edge carries no condition or one that parses
+     */
+    public Optional<String> validate(WorkflowNode node, WorkflowEdge edge) {
+        String expression = edge.getConditionExpr() == null ? "" : edge.getConditionExpr().trim();
+        if (expression.isEmpty()) {
+            return Optional.empty();
+        }
+
+        try {
+            parser.parseExpression(expression);
+            return Optional.empty();
+        } catch (RuntimeException failure) {
+            return Optional.of(defect(node, edge, expression,
+                    "could not be parsed: " + rootCauseMessage(failure)).getMessage());
+        }
     }
 
     /**

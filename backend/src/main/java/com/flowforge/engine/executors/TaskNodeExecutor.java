@@ -7,7 +7,9 @@ import com.flowforge.task.Task;
 import com.flowforge.task.TaskRepository;
 import com.flowforge.task.TaskStatus;
 import com.flowforge.user.User;
+import com.flowforge.workflow.NodeConfigRule;
 import com.flowforge.workflow.NodeType;
+import com.flowforge.workflow.WorkflowEdge;
 import com.flowforge.workflow.WorkflowNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,7 +67,7 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class TaskNodeExecutor implements NodeExecutor {
+public class TaskNodeExecutor implements NodeExecutor, NodeConfigRule {
 
     /** Config key naming a specific assignee by user id. */
     public static final String CONFIG_ASSIGNEE_USER_ID = "assigneeUserId";
@@ -148,5 +151,24 @@ public class TaskNodeExecutor implements NodeExecutor {
         state.put("status", task.getStatus() == null ? null : task.getStatus().name());
         state.put("dueAt", task.getDueAt() == null ? null : task.getDueAt().toString());
         return state;
+    }
+
+    /**
+     * A Task node must know who to give the work to, and its timeout must be a usable number
+     * (Requirements 7.5, 11.1).
+     *
+     * <p>The assignee check is the one that matters: without it a node routes work to nobody, and the
+     * instance parks on it forever with no task row for anyone to find.
+     */
+    @Override
+    public List<String> violations(WorkflowNode node, List<WorkflowEdge> outgoingEdges) {
+        List<String> violations = new ArrayList<>(NodeConfigChecks.requireUserOrRole(
+                node, CONFIG_ASSIGNEE_USER_ID, CONFIG_ASSIGNEE_ROLE, "assignee"));
+        // A key that is present and parseable can still name nobody, which fails just as hard.
+        assigneeResolver.validateAssigneeReference(node, CONFIG_ASSIGNEE_USER_ID)
+                .ifPresent(violations::add);
+        violations.addAll(
+                NodeConfigChecks.parseable(() -> NodeConfig.positiveLong(node, CONFIG_TIMEOUT_MINUTES)));
+        return List.copyOf(violations);
     }
 }

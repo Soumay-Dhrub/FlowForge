@@ -84,6 +84,78 @@ public class AssigneeResolver {
     }
 
     /**
+     * Whether a node's assignee reference points at somebody who exists, checked at publish time
+     * (Requirement 7.5).
+     *
+     * <p>Presence and syntax are not enough: an approver id that parses but names no account fails every
+     * request that reaches the node, exactly as a missing key does. That is knowable from the definition,
+     * so it belongs at publish.
+     *
+     * <p><b>A named user is checked; a named role is not.</b> The asymmetry is deliberate. A user id is a
+     * hard reference to one account and a typo in it is simply wrong. A role, though, is a description of
+     * whoever holds it, and a workflow legitimately gets published before the team is staffed — refusing
+     * that would make the platform demand people exist before their process may be defined. An empty role
+     * is still caught at execution, where it is genuinely unresolvable.
+     *
+     * <p>Nor does a clean result here guarantee execution succeeds: the account may be deactivated after
+     * publishing, and a frozen version cannot be re-validated. This narrows the window rather than
+     * closing it, which is the most publish-time validation can honestly do about a mutable world.
+     *
+     * @param node      the node to check
+     * @param userIdKey config key holding a specific user id
+     * @return the violation, or empty when the key is absent or names an assignable user
+     */
+    public Optional<String> validateAssigneeReference(WorkflowNode node, String userIdKey) {
+        Optional<UUID> userId;
+        try {
+            userId = NodeConfig.uuid(node, userIdKey);
+        } catch (AppException malformed) {
+            return Optional.of(malformed.getMessage());
+        }
+
+        return userId
+                .filter(id -> userRepository.findByIdAndIsActiveTrue(id).isEmpty())
+                .map(id -> NodeConfig.defect(node, userIdKey, id.toString(),
+                        "does not name an active user").getMessage());
+    }
+
+    /**
+     * Whether every user id a node addresses points at somebody who exists (Requirement 7.5).
+     *
+     * <p>The audience counterpart of {@link #validateAssigneeReference}, with the same reasoning: ids are
+     * checked, roles are not.
+     *
+     * @param node       the node to check
+     * @param userIdsKey config key holding user ids
+     * @return one violation per unresolvable id, empty when all of them resolve
+     */
+    public List<String> validateAudienceReferences(WorkflowNode node, String userIdsKey) {
+        List<String> raw;
+        try {
+            raw = NodeConfig.strings(node, userIdsKey);
+        } catch (AppException malformed) {
+            return List.of(malformed.getMessage());
+        }
+
+        List<String> violations = new ArrayList<>();
+        for (String value : raw) {
+            UUID id;
+            try {
+                id = UUID.fromString(value);
+            } catch (IllegalArgumentException notAnId) {
+                violations.add(NodeConfig.defect(node, userIdsKey, value,
+                        "is not a valid identifier").getMessage());
+                continue;
+            }
+            if (userRepository.findByIdAndIsActiveTrue(id).isEmpty()) {
+                violations.add(NodeConfig.defect(node, userIdsKey, value,
+                        "does not name an active user").getMessage());
+            }
+        }
+        return List.copyOf(violations);
+    }
+
+    /**
      * Every user a node addresses — a list of user ids, a list of role names, or both, de-duplicated
      * and in the order authored.
      *

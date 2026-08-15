@@ -52,13 +52,39 @@ final class InMemoryWorkflowFixture {
     final AuditLogService auditLogService = new AuditLogService(auditLogRepository);
     final WorkflowVersionMapper versionMapper = new WorkflowVersionMapperImpl();
     final WorkflowMapper workflowMapper = new WorkflowMapperImpl(versionMapper);
-    final WorkflowService workflowService;
-    final WorkflowVersionService workflowVersionService;
+    // Not final: assigned by initialise(), which the constructors share.
+    WorkflowService workflowService;
+    WorkflowVersionService workflowVersionService;
+
+    /** The config rules publishing applies; empty means structure is judged alone. */
+    private final List<NodeConfigRule> configRules;
 
     final User admin = user("Ada Lovelace", "ada@example.com", "ADMIN");
     final User manager = user("Grace Hopper", "grace@example.com", "MANAGER");
 
+    /**
+     * A fixture with no node config rules, so publishing judges structure alone.
+     *
+     * <p>That is the right default here: the structural rules and the config rules fail independently,
+     * and a test about reachability should not have to configure an approver on every node it draws to
+     * get a clean result. {@code WorkflowVersionService} treats a node type with no rule as needing no
+     * configuration, which is exactly this.
+     */
     InMemoryWorkflowFixture() {
+        this(List.of());
+    }
+
+    /**
+     * A fixture whose publishing also applies the given node config rules (Requirement 7.5).
+     *
+     * @param configRules the rules to apply; in production these are the engine's executors
+     */
+    InMemoryWorkflowFixture(List<NodeConfigRule> configRules) {
+        this.configRules = List.copyOf(configRules);
+        initialise();
+    }
+
+    private void initialise() {
         when(workflowRepository.save(any(Workflow.class))).thenAnswer(call -> {
             Workflow workflow = call.getArgument(0);
             if (workflow.getId() == null) {
@@ -175,7 +201,8 @@ final class InMemoryWorkflowFixture {
                 userRepository,
                 versionMapper,
                 workflowService,
-                auditLogService);
+                auditLogService,
+                configRules);
     }
 
     // ── graph authoring helpers ──────────────────────────────────────────────────────────────────

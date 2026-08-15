@@ -19,6 +19,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -73,7 +74,6 @@ import java.util.UUID;
  * {@code published_at}.</p>
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class WorkflowVersionService {
 
@@ -84,6 +84,45 @@ public class WorkflowVersionService {
     private final WorkflowVersionMapper versionMapper;
     private final WorkflowService workflowService;
     private final AuditLogService auditLogService;
+
+    /** Config rules by the node type they police; node types absent from it need no configuration. */
+    private final Map<NodeType, NodeConfigRule> configRulesByType;
+
+    /**
+     * @param configRules every {@link NodeConfigRule} bean; the executors implement their own
+     * @throws IllegalStateException when two rules claim the same node type, which would make
+     *                               validation depend on bean ordering
+     */
+    public WorkflowVersionService(
+            WorkflowVersionRepository versionRepository,
+            WorkflowNodeRepository nodeRepository,
+            WorkflowEdgeRepository edgeRepository,
+            UserRepository userRepository,
+            WorkflowVersionMapper versionMapper,
+            WorkflowService workflowService,
+            AuditLogService auditLogService,
+            List<NodeConfigRule> configRules
+    ) {
+        this.versionRepository = versionRepository;
+        this.nodeRepository = nodeRepository;
+        this.edgeRepository = edgeRepository;
+        this.userRepository = userRepository;
+        this.versionMapper = versionMapper;
+        this.workflowService = workflowService;
+        this.auditLogService = auditLogService;
+
+        Map<NodeType, NodeConfigRule> index = new EnumMap<>(NodeType.class);
+        for (NodeConfigRule rule : configRules) {
+            NodeConfigRule existing = index.put(rule.supportedType(), rule);
+            if (existing != null) {
+                throw new IllegalStateException("Two config rules claim node type %s: %s and %s"
+                        .formatted(rule.supportedType(), existing.getClass().getName(),
+                                rule.getClass().getName()));
+            }
+        }
+        this.configRulesByType = Map.copyOf(index);
+        log.info("Node config rules registered for {}", index.keySet());
+    }
 
     /**
      * Run all four structural rules over a version's stored graph (Requirements 7.1–7.5).
@@ -206,6 +245,7 @@ public class WorkflowVersionService {
         violations.addAll(checkAllNodesReachable(nodes, edges));
         violations.addAll(checkNoOrphanedEdges(versionId, nodes, edges));
         violations.addAll(checkAtLeastOneEnd(nodes));
+        violations.addAll(checkNodeConfiguration(nodes, edges));
         return new ValidationResult(versionId, violations);
     }
 
@@ -302,6 +342,35 @@ public class WorkflowVersionService {
     private List<String> checkAtLeastOneEnd(List<WorkflowNode> nodes) {
         boolean hasEnd = nodes.stream().anyMatch(node -> node.getType() == NodeType.END);
         return hasEnd ? List.of() : List.of("Graph must contain at least one End node");
+    }
+
+    /**
+     * Rule 5 — every node is configured well enough to run (Requirement 7.5).
+     *
+     * <p>The first four rules judge shape; this one judges whether the shape can execute. An Approval
+     * node naming no approver, a Condition node with an expression that will not parse, a timeout of
+     * zero minutes: all four structural rules pass, publishing succeeds, and then every request that
+     * reaches the node fails — against a version that is now immutable, in front of a user who cannot
+     * fix it. Anything knowable from the definition alone belongs here rather than at execution time.
+     *
+     * <p>The rules are the executors, supplied by Spring through {@link NodeConfigRule}. That is what
+     * keeps this honest: the class that reads a config key is the class that declares it required, so
+     * validation cannot quietly diverge from execution. A node type with no rule needs no configuration.
+     */
+    private List<String> checkNodeConfiguration(List<WorkflowNode> nodes, List<WorkflowEdge> edges) {
+        List<String> violations = new ArrayList<>();
+        for (WorkflowNode node : nodes) {
+            NodeConfigRule rule = configRulesByType.get(node.getType());
+            if (rule == null) {
+                continue;
+            }
+            List<WorkflowEdge> outgoing = edges.stream()
+                    .filter(edge -> edge.getSourceNode() != null
+                            && node.getId().equals(edge.getSourceNode().getId()))
+                    .toList();
+            violations.addAll(rule.violations(node, outgoing));
+        }
+        return violations;
     }
 
     private UUID endpointId(WorkflowNode node) {
