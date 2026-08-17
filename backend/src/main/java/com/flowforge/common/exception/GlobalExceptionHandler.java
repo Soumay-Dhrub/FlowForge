@@ -6,10 +6,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -69,6 +71,40 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleAuthentication(AuthenticationException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Authentication required"));
+    }
+
+    /**
+     * A request parameter or path variable that cannot be converted to the type the handler declares —
+     * a malformed UUID, or a date in the wrong format.
+     *
+     * <p>This is the caller's mistake, so it is 400. Without the handler it fell through to the
+     * catch-all and came back as 500, which told a client its own bad input was a server fault and
+     * left them nothing to correct. The parameter name is named; the raw value is not echoed, since
+     * reflecting caller-supplied text into a response is how reflected-injection bugs start.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String expected = ex.getRequiredType() == null ? "the expected type"
+                : ex.getRequiredType().getSimpleName();
+        log.debug("Rejected request: parameter '{}' could not be read as {}", ex.getName(), expected);
+        return ResponseEntity.badRequest().body(ApiResponse.error(
+                "Parameter '%s' is not a valid %s".formatted(ex.getName(), expected),
+                List.of(new ApiResponse.FieldError(ex.getName(), "must be a valid " + expected))));
+    }
+
+    /**
+     * A request body that could not be parsed or bound — malformed JSON, or a value of the wrong shape
+     * for the field it is given to.
+     *
+     * <p>400 for the same reason as above. The parser's own message is deliberately not forwarded: it
+     * names internal class names and field paths, which tells a caller about the server's internals
+     * without helping them fix the request.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        log.debug("Rejected request: unreadable body ({})", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Request body is missing or malformed"));
     }
 
     /**
