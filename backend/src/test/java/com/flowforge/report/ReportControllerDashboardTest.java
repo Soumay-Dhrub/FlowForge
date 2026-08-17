@@ -64,8 +64,12 @@ class ReportControllerDashboardTest {
                 .thenReturn(List.of(task("Somebody else's task")));
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new ReportController(
-                        new ReportService(taskService, instanceService, auditLogRepository)))
+                .standaloneSetup(new ReportController(new ReportService(
+                        taskService,
+                        instanceService,
+                        auditLogRepository,
+                        mock(MetricsQueryRepository.class),
+                        mock(com.flowforge.workflow.WorkflowRepository.class))))
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();

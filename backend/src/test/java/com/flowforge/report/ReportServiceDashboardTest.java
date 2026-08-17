@@ -50,7 +50,12 @@ class ReportServiceDashboardTest {
 
     @BeforeEach
     void setUp() {
-        reportService = new ReportService(taskService, instanceService, auditLogRepository);
+        reportService = new ReportService(
+                taskService,
+                instanceService,
+                auditLogRepository,
+                mock(MetricsQueryRepository.class),
+                mock(com.flowforge.workflow.WorkflowRepository.class));
         caller = UUID.randomUUID();
 
         when(taskService.listTasks(any(), any(TaskFilter.class))).thenReturn(List.of());
