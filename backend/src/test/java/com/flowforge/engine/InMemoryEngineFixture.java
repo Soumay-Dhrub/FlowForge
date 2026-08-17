@@ -14,8 +14,12 @@ import com.flowforge.engine.executors.StartNodeExecutor;
 import com.flowforge.engine.executors.TaskNodeExecutor;
 import com.flowforge.notification.InAppNotificationService;
 import com.flowforge.notification.Notification;
+import com.flowforge.notification.NotificationEmailDispatcher;
+import com.flowforge.notification.NotificationPreferenceRepository;
+import com.flowforge.notification.NotificationPreferenceService;
 import com.flowforge.notification.NotificationRepository;
 import com.flowforge.notification.NotificationService;
+import com.flowforge.notification.RecordingEmailSender;
 import com.flowforge.task.DelegationRepository;
 import com.flowforge.task.DelegationRouter;
 import com.flowforge.task.Task;
@@ -105,8 +109,21 @@ final class InMemoryEngineFixture {
 
     /** Delegation routing, over the same in-memory delegations a test declares. */
     final DelegationRouter delegationRouter = new DelegationRouter(delegationRepository);
-    final NotificationService notificationService =
-            new InAppNotificationService(notificationRepository, userRepository);
+    /**
+     * Notifications recorded in memory, with email dispatch wired to a recording sender so the engine
+     * tests exercise the same code path production does without reaching SMTP. No preference rows
+     * exist here, so the catalog defaults decide.
+     */
+    final RecordingEmailSender emailSender = new RecordingEmailSender();
+    final NotificationPreferenceRepository preferenceRepository =
+            mock(NotificationPreferenceRepository.class);
+    final NotificationService notificationService = new InAppNotificationService(
+            notificationRepository,
+            userRepository,
+            new NotificationEmailDispatcher(
+                    new NotificationPreferenceService(preferenceRepository, userRepository),
+                    emailSender,
+                    "http://localhost:3000"));
     final ConditionEvaluator conditionEvaluator = new ConditionEvaluator();
 
     /** The ERROR transition, shared by the engine and the Condition executor. */
@@ -206,6 +223,13 @@ final class InMemoryEngineFixture {
                             .filter(task -> statuses.contains(task.getStatus()))
                             .toList();
                 });
+
+        // Nobody has expressed a preference, so the catalog defaults apply. Stubbed explicitly because
+        // an unstubbed Optional-returning mock answers null, which would NPE inside the real lookup.
+        when(preferenceRepository.findByUser_IdAndEventType(any(UUID.class), anyString()))
+                .thenReturn(Optional.empty());
+        when(preferenceRepository.findByUser_IdOrderByEventTypeAsc(any(UUID.class)))
+                .thenReturn(List.of());
 
         when(notificationRepository.save(any(Notification.class))).thenAnswer(call -> {
             Notification notification = call.getArgument(0);
@@ -329,7 +353,7 @@ final class InMemoryEngineFixture {
 
     TaskNodeExecutor taskNodeExecutor() {
         return new TaskNodeExecutor(
-                taskRepository, assigneeResolver, delegationRouter, auditLogService);
+                taskRepository, assigneeResolver, delegationRouter, auditLogService, notificationService);
     }
 
     NotificationNodeExecutor notificationNodeExecutor() {
@@ -352,7 +376,7 @@ final class InMemoryEngineFixture {
 
     ApprovalNodeExecutor approvalNodeExecutor() {
         return new ApprovalNodeExecutor(
-                taskRepository, assigneeResolver, delegationRouter, auditLogService);
+                taskRepository, assigneeResolver, delegationRouter, auditLogService, notificationService);
     }
 
     /** Register the Condition and Approval executors task 18 delivers. */

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--/*
+  Shared pieces of the notification emails (Requirement 17.4).
+
+  Every value is interpolated with th:text, which HTML-escapes. That is the whole reason these
+  templates exist rather than string concatenation: a user named `<script>alert(1)</script>`, or a
+  workflow named `Travel <b>International</b>`, renders as those characters and not as markup. No
+  th:utext appears anywhere in this directory, and none should.
+
+  Identifiers only. The reader follows `link` to see the substance — request data, comments and
+  approval reasons stay in the application, where access control applies.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/* The task / request / node identifiers, each row omitted when its value is absent. */-->
+<table th:fragment="details" role="presentation" cellpadding="4" cellspacing="0"
+       style="border-collapse:collapse;font:14px/1.5 Helvetica,Arial,sans-serif">
+    <tbody>
+    <tr th:if="${taskId}">
+        <th align="left" style="color:#555;font-weight:600">Task</th>
+        <td th:text="${taskId}">-</td>
+    </tr>
+    <tr th:if="${instanceId}">
+        <th align="left" style="color:#555;font-weight:600">Request</th>
+        <td th:text="${instanceId}">-</td>
+    </tr>
+    <tr th:if="${nodeId}">
+        <th align="left" style="color:#555;font-weight:600">Step</th>
+        <td th:text="${nodeId}">-</td>
+    </tr>
+    <tr th:if="${dueAt}">
+        <th align="left" style="color:#555;font-weight:600">Due</th>
+        <td th:text="${dueAt}">-</td>
+    </tr>
+    </tbody>
+</table>
+
+<!--/* Call to action plus the standing footer. */-->
+<div th:fragment="footer" style="font:14px/1.5 Helvetica,Arial,sans-serif">
+    <p style="margin:16px 0">
+        <a th:href="${link}" th:text="${link}"
+           style="color:#1a56db;text-decoration:underline">Open FlowForge</a>
+    </p>
+    <p style="margin:16px 0 0;color:#777;font-size:12px">
+        This message is a copy of a FlowForge notification. Details of the request are only shown in
+        the application. You can turn these emails off per event type in your notification
+        preferences.
+    </p>
+</div>
+
+</body>
+</html>

@@ -7,6 +7,7 @@ import com.flowforge.auth.PasswordResetTokenRepository;
 import com.flowforge.auth.RefreshToken;
 import com.flowforge.auth.dto.TokenResponse;
 import com.flowforge.common.exception.AppException;
+import com.flowforge.notification.RecordingEmailSender;
 import com.flowforge.user.dto.CreateUserRequest;
 import com.flowforge.user.dto.UserResponse;
 import jakarta.servlet.FilterChain;
@@ -67,7 +68,7 @@ class DeactivationBlocksAccessPropertyTest {
                 fixture.passwordEncoder,
                 jwtTokenProvider,
                 mock(PasswordResetTokenRepository.class),
-                (to, subject, body) -> { },
+                new RecordingEmailSender(),
                 fixture.auditLogService,
                 24 * 60 * 60 * 1000L,
                 "https://flowforge.test/reset-password");

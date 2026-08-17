@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!--/* TASK_APPROVED (Requirements 17.2, 17.4). Sent to the request's initiator. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Your request was approved</title>
+</head>
+<body style="margin:0;padding:24px;background:#f6f7f9">
+<div style="max-width:560px;margin:0 auto;padding:24px;background:#fff;border-radius:8px">
+    <h1 style="margin:0 0 12px;font:600 18px/1.4 Helvetica,Arial,sans-serif">A step of your request was approved</h1>
+
+    <p style="margin:0 0 16px;font:14px/1.5 Helvetica,Arial,sans-serif">
+        Hello <span th:text="${recipientName} ?: 'there'">there</span>, a reviewer approved a step of
+        your request. It continues to the next step of the workflow.
+    </p>
+
+    <div th:replace="~{email/fragments :: details}"></div>
+    <div th:replace="~{email/fragments :: footer}"></div>
+</div>
+</body>
+</html>

@@ -3,6 +3,8 @@ package com.flowforge.engine.executors;
 import com.flowforge.audit.AuditLogService;
 import com.flowforge.engine.NodeExecutor;
 import com.flowforge.engine.WorkflowInstance;
+import com.flowforge.notification.NotificationEventTypes;
+import com.flowforge.notification.NotificationService;
 import com.flowforge.task.DelegationRouter;
 import com.flowforge.task.Task;
 import com.flowforge.task.TaskRepository;
@@ -26,7 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The Task node: raises a human task and stops (Requirements 9.2, 11.1).
+ * The Task node: raises a human task and stops (Requirements 9.2, 11.1, 17.1).
  *
  * <p>This is the node that makes a workflow wait. It creates one {@link Task} row assigned to a real
  * user and then <em>does not move the instance</em>: per the {@link NodeExecutor} contract, leaving the
@@ -65,10 +67,12 @@ import java.util.Optional;
  * executes the node the instance sits on, so an extra call against a waiting instance would otherwise
  * mint a second task for the same step and let one decision leave the other stranded.
  *
- * <p>Notifying the assignee (Requirement 17.1) is deliberately not done here: task 26 wires
- * {@link com.flowforge.notification.NotificationService} into this executor once preferences and email
- * delivery exist, so the assignment event is raised once, in one place, for creation, delegation and
- * escalation alike.
+ * <p>The assignee is notified here (Requirement 17.1), after the task row exists and against whoever
+ * actually received it — so a delegated assignment tells the delegate, not the person they are covering
+ * for. The notification is raised inside the engine's transaction, like the task itself: nobody is told
+ * about work that a later failure in the same {@code advance} rolled back. Whether that notification is
+ * also emailed is the notification subsystem's decision, taken from the recipient's preferences, and it
+ * cannot fail this executor.
  */
 @Component
 @RequiredArgsConstructor
@@ -92,6 +96,7 @@ public class TaskNodeExecutor implements NodeExecutor, NodeConfigRule {
     private final AssigneeResolver assigneeResolver;
     private final DelegationRouter delegationRouter;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     @Override
     public NodeType supportedType() {
@@ -141,11 +146,31 @@ public class TaskNodeExecutor implements NodeExecutor, NodeConfigRule {
                 null,
                 snapshot(task));
 
+        notifyAssignee(task, assignee);
+
         log.info("Instance {} raised task {} at node {} for user {}, due {}",
                 instance.getId(), task.getId(), node.getId(), assignee.getId(),
                 dueAt == null ? "never" : dueAt);
 
         // No transition and no status change: the instance waits here for a decision.
+    }
+
+    /**
+     * Tell the assignee their work is waiting (Requirement 17.1).
+     *
+     * <p>Raised only when a task row was actually created — the early return above means a re-executed
+     * node does not notify a second time about the same outstanding task.
+     */
+    private void notifyAssignee(Task task, User assignee) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("message", "A task has been assigned to you.");
+        payload.put("taskId", String.valueOf(task.getId()));
+        payload.put("instanceId", String.valueOf(task.instanceId()));
+        payload.put("nodeId", String.valueOf(task.nodeId()));
+        payload.put("dueAt", task.getDueAt() == null ? null : task.getDueAt().toString());
+
+        notificationService.notify(
+                assignee.getId(), NotificationEventTypes.TASK_ASSIGNED, payload);
     }
 
     /**

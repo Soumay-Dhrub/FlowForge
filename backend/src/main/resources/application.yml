@@ -55,6 +55,10 @@ app:
     url: ${PASSWORD_RESET_URL:http://localhost:3000/reset-password}
   mail:
     from: ${MAIL_FROM:no-reply@flowforge.local}
+  web:
+    # Where notification emails point. They carry identifiers and this link, never request data or
+    # comments, so the reader follows it back into the application where access control applies.
+    base-url: ${WEB_BASE_URL:http://localhost:3000}
   attachment:
     # Per-file limit of Requirement 14.2. AttachmentStorage counts bytes while writing, so this holds
     # even when a request understates its Content-Length.

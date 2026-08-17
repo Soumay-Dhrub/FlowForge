@@ -14,18 +14,20 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The in-app half of the notification subsystem: persists one {@link Notification} row per event
- * (Requirement 17.1).
+ * The whole of {@link NotificationService}: persists one {@link Notification} row per event
+ * (Requirement 17.1) and, when the recipient has email enabled for that event type, has it emailed too
+ * (Requirement 17.4).
  *
- * <p>This is a real implementation, not a placeholder — the record it writes is what the notification
- * list of Requirement 18.3 reads and what read-status of Requirement 18.1 flips. What it deliberately
- * does <em>not</em> do yet is email: no preference lookup, no {@link EmailSender} call. Task 26 adds
- * those here, and until it does a caller gets a durable in-app notification and no mail, which is a
- * visible partial behaviour rather than a silent no-op.
+ * <p>The row is the record; the email is a copy of it. That ordering is deliberate — the row is written
+ * first, in the producer's transaction, and {@link NotificationEmailDispatcher} only decides about mail
+ * afterwards. So there is no path on which somebody is emailed about an event the system has no record
+ * of.
  *
  * <p>No {@code @Transactional} on purpose. The write joins whatever transaction the producer already
  * has — the engine's {@code advance}, a task decision — so a notification never survives work that
- * rolled back, and a caller never sees an event announced for something that did not happen.
+ * rolled back, and a caller never sees an event announced for something that did not happen. The email
+ * is deliberately <em>not</em> subject to that: it leaves after the commit. The reasoning, and the cost
+ * of the alternative, are in {@link NotificationEmailDispatcher}.
  */
 @Service
 @RequiredArgsConstructor
@@ -37,6 +39,7 @@ public class InAppNotificationService implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final NotificationEmailDispatcher emailDispatcher;
 
     @Override
     public Notification notify(UUID userId, String eventType, Map<String, Object> payload) {
@@ -55,6 +58,10 @@ public class InAppNotificationService implements NotificationService {
 
         log.debug("Notification {} ({}) created for user {}",
                 notification.getId(), notification.getEventType(), userId);
+
+        // Requirement 17.4. Never throws, and never sends before this transaction commits.
+        emailDispatcher.dispatchFor(notification, recipient);
+
         return notification;
     }
 

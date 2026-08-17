@@ -3,6 +3,8 @@ package com.flowforge.engine.executors;
 import com.flowforge.audit.AuditLogService;
 import com.flowforge.engine.NodeExecutor;
 import com.flowforge.engine.WorkflowInstance;
+import com.flowforge.notification.NotificationEventTypes;
+import com.flowforge.notification.NotificationService;
 import com.flowforge.task.DelegationRouter;
 import com.flowforge.task.Task;
 import com.flowforge.task.TaskRepository;
@@ -60,9 +62,10 @@ import java.util.Optional;
  * {@code TaskService.recordDecision}, which is also where ownership and the mandatory rejection comment
  * are enforced. This node's whole responsibility is the pending task that makes the decision possible.
  *
- * <p>Notifying the approver (Requirement 17.1) is task 26's, for the same reason it is not done in the
- * Task node: the assignment event should be raised in one place for creation, delegation and escalation
- * alike.
+ * <p>The approver is notified here (Requirement 17.1), after the task row exists and against whoever
+ * actually received it, so a delegated approval tells the delegate. Like the task row, the notification
+ * is written in the engine's transaction: nobody is asked to decide on something a later failure rolled
+ * back. Email delivery is the notification subsystem's decision and cannot fail this executor.
  *
  * <p>The resolved approver does pass through {@link DelegationRouter} (Requirement 16.2). Wiring it here
  * as well as in the Task node is not duplication for its own sake: Requirement 16 is written about
@@ -91,6 +94,7 @@ public class ApprovalNodeExecutor implements NodeExecutor, NodeConfigRule {
     private final AssigneeResolver assigneeResolver;
     private final DelegationRouter delegationRouter;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     @Override
     public NodeType supportedType() {
@@ -141,11 +145,31 @@ public class ApprovalNodeExecutor implements NodeExecutor, NodeConfigRule {
                 null,
                 snapshot(task));
 
+        notifyApprover(task, approver);
+
         log.info("Instance {} awaits approval task {} at node {} from user {}, due {}",
                 instance.getId(), task.getId(), node.getId(), approver.getId(),
                 dueAt == null ? "never" : dueAt);
 
         // No transition and no status change: the instance waits here for the decision.
+    }
+
+    /**
+     * Tell the approver a decision is waiting on them (Requirement 17.1).
+     *
+     * <p>Only when a task row was actually created; the early return above means a re-executed node does
+     * not ask the same person twice about the same outstanding decision.
+     */
+    private void notifyApprover(Task task, User approver) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("message", "A request is waiting for your decision.");
+        payload.put("taskId", String.valueOf(task.getId()));
+        payload.put("instanceId", String.valueOf(task.instanceId()));
+        payload.put("nodeId", String.valueOf(task.nodeId()));
+        payload.put("dueAt", task.getDueAt() == null ? null : task.getDueAt().toString());
+
+        notificationService.notify(
+                approver.getId(), NotificationEventTypes.TASK_ASSIGNED, payload);
     }
 
     /** The deadline this node's timeout implies, or {@code null} when it configures none. */

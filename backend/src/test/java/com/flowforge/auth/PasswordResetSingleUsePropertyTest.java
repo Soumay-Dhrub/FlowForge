@@ -175,7 +175,19 @@ class PasswordResetSingleUsePropertyTest {
             });
 
             // Records only the recipient: bodies carry the reset link and are never retained.
-            EmailSender emailSender = (to, subject, body) -> sentEmails.add(to);
+            EmailSender emailSender = new EmailSender() {
+                @Override
+                public void send(String to, String subject, String body) {
+                    sentEmails.add(to);
+                }
+
+                @Override
+                public void send(String to, String subject, String templateName,
+                                 Map<String, Object> variables) {
+                    throw new AssertionError(
+                            "password reset should send a plain body, not template " + templateName);
+                }
+            };
 
             this.authService = new AuthService(
                     userRepository,

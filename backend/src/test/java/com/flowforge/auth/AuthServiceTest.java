@@ -138,7 +138,22 @@ class AuthServiceTest {
             return entry;
         });
 
-        EmailSender emailSender = (to, subject, body) -> sentEmails.add(new SentEmail(to, subject, body));
+        // An anonymous class rather than a lambda: EmailSender now also carries the template-driven
+        // overload used by notification emails. Password reset builds its own body, so reaching the
+        // template method here would mean the reset path had quietly changed shape.
+        EmailSender emailSender = new EmailSender() {
+            @Override
+            public void send(String to, String subject, String body) {
+                sentEmails.add(new SentEmail(to, subject, body));
+            }
+
+            @Override
+            public void send(String to, String subject, String templateName,
+                             Map<String, Object> variables) {
+                throw new AssertionError(
+                        "password reset should send a plain body, not template " + templateName);
+            }
+        };
 
         authService = new AuthService(
                 userRepository,

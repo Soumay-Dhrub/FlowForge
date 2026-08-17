@@ -4,6 +4,7 @@ import com.flowforge.audit.AuditLogRepository;
 import com.flowforge.audit.AuditLogService;
 import com.flowforge.auth.dto.TokenResponse;
 import com.flowforge.common.exception.AppException;
+import com.flowforge.notification.RecordingEmailSender;
 import com.flowforge.user.Role;
 import com.flowforge.user.User;
 import com.flowforge.user.UserRepository;
@@ -134,7 +135,7 @@ class RefreshTokenSingleUsePropertyTest {
                     passwordEncoder,
                     jwtTokenProvider,
                     mock(PasswordResetTokenRepository.class),
-                    (to, subject, body) -> { },
+                    new RecordingEmailSender(),
                     new AuditLogService(mock(AuditLogRepository.class)),
                     24 * 60 * 60 * 1000L,
                     "https://flowforge.test/reset-password");
