@@ -52,6 +52,24 @@ public class CommentService {
      */
     @Transactional
     public CommentResponse addComment(UUID instanceId, UUID userId, String body) {
+        return addComment(instanceId, userId, body, null);
+    }
+
+    /**
+     * Post a comment, optionally as a reply to an existing one (Requirement 15.1).
+     *
+     * @param instanceId the request
+     * @param userId     the author, who must be a participant
+     * @param body       what to say; must not be blank
+     * @param parentId   the comment being replied to, or {@code null} for a new point
+     * @return the stored comment
+     * @throws EntityNotFoundException 404 when the request, the author or the parent does not exist
+     * @throws AppException            403 when the author is not a participant, 400 when the body is
+     *                                 blank, the parent belongs to another request, or the parent is
+     *                                 itself a reply
+     */
+    @Transactional
+    public CommentResponse addComment(UUID instanceId, UUID userId, String body, UUID parentId) {
         WorkflowInstance instance = participants.requireParticipant(instanceId, userId);
         User author = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User", userId));
@@ -63,10 +81,13 @@ public class CommentService {
             throw new AppException("A comment cannot be empty", HttpStatus.BAD_REQUEST);
         }
 
+        Comment parent = parentId == null ? null : requireReplyableParent(parentId, instanceId);
+
         Comment saved = commentRepository.save(Comment.builder()
                 .instance(instance)
                 .author(author)
                 .body(body.trim())
+                .parent(parent)
                 .build());
 
         auditLogService.record(
@@ -98,6 +119,36 @@ public class CommentService {
                 .toList();
     }
 
+    /**
+     * The comment a reply may attach to, or a refusal explaining why not.
+     *
+     * <p>Two rules the database cannot enforce. A parent must belong to the request being commented on —
+     * {@code parent_comment_id} only proves the row exists, and without this a reply could quote a comment
+     * from a request its author is not a participant of, leaking that comment's existence and pulling its
+     * text into a thread it does not belong to. And a parent must not itself be a reply, which is what
+     * keeps the thread one level deep.
+     *
+     * <p>Both are 400 rather than 404: the parent may well exist, so reporting "not found" would be untrue,
+     * and the caller's request is what is wrong.
+     */
+    private Comment requireReplyableParent(UUID parentId, UUID instanceId) {
+        Comment parent = commentRepository.findById(parentId)
+                .orElseThrow(() -> new EntityNotFoundException("Comment", parentId));
+
+        if (!instanceId.equals(parent.instanceId())) {
+            log.warn("Refused a reply to comment {}, which belongs to instance {} rather than {}",
+                    parentId, parent.instanceId(), instanceId);
+            throw new AppException(
+                    "That comment belongs to a different request", HttpStatus.BAD_REQUEST);
+        }
+        if (parent.isReply()) {
+            throw new AppException(
+                    "Replies are one level deep: reply to the comment this one answers instead",
+                    HttpStatus.BAD_REQUEST);
+        }
+        return parent;
+    }
+
     private CommentResponse toResponse(Comment comment) {
         User author = comment.getAuthor();
         return new CommentResponse(
@@ -106,6 +157,7 @@ public class CommentService {
                 comment.authorId(),
                 author == null ? null : author.getName(),
                 comment.getBody(),
+                comment.parentId(),
                 comment.getCreatedAt());
     }
 

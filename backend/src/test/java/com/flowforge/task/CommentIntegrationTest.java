@@ -35,6 +35,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 /**
  * Comments against a real PostgreSQL database (Requirements 15.1, 15.2, 15.3).
@@ -180,6 +181,74 @@ class CommentIntegrationTest {
                 .as("the repository's own order agrees with the service's")
                 .extracting(Comment::getBody)
                 .startsWith("message 1");
+    }
+
+    /**
+     * Threading against the real column and constraints added by V3 (Requirement 15.1).
+     *
+     * <p>The parent link is a self-referencing foreign key with a CHECK against self-reply, so whether it
+     * actually holds is a question about the schema rather than about the service — an in-memory map would
+     * accept anything.
+     */
+    @Test
+    void aReplyPersistsItsParentLink() {
+        CommentResponse parent =
+                commentService.addComment(instance.getId(), initiator.getId(), "Why two quarters?");
+        CommentResponse reply = commentService.addComment(
+                instance.getId(), approver.getId(), "The booking spans both.", parent.id());
+
+        Comment persistedReply = commentRepository.findById(reply.id()).orElseThrow();
+        assertThat(persistedReply.parentId())
+                .as("the parent link survives the round trip")
+                .isEqualTo(parent.id());
+        assertThat(persistedReply.isReply()).isTrue();
+
+        assertThat(commentRepository.findById(parent.id()).orElseThrow().parentId())
+                .as("the parent is top-level")
+                .isNull();
+
+        assertThat(commentService.listComments(instance.getId(), initiator.getId()))
+                .extracting(CommentResponse::id, CommentResponse::parentId)
+                .containsExactly(
+                        tuple(parent.id(), null),
+                        tuple(reply.id(), parent.id()));
+    }
+
+    @Test
+    void aReplyToACommentOnAnotherRequestIsRefusedBeforeItReachesTheDatabase() {
+        WorkflowInstance elsewhere = instanceRepository.save(WorkflowInstance.builder()
+                .workflowVersion(instance.getWorkflowVersion())
+                .initiatedBy(initiator)
+                .currentNode(instance.getCurrentNode())
+                .status(instance.getStatus())
+                .build());
+        CommentResponse foreign =
+                commentService.addComment(elsewhere.getId(), initiator.getId(), "Another request.");
+
+        assertThatThrownBy(() -> commentService.addComment(
+                instance.getId(), initiator.getId(), "Quoting across requests.", foreign.id()))
+                .isInstanceOf(AppException.class)
+                .extracting(thrown -> ((AppException) thrown).getStatus())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+
+        assertThat(commentRepository.findByInstance_IdOrderByCreatedAtAscIdAsc(instance.getId()))
+                .as("nothing was written")
+                .isEmpty();
+    }
+
+    @Test
+    void deletingAParentTakesItsRepliesWithIt() {
+        CommentResponse parent =
+                commentService.addComment(instance.getId(), initiator.getId(), "First point.");
+        CommentResponse reply = commentService.addComment(
+                instance.getId(), approver.getId(), "Answering it.", parent.id());
+
+        // ON DELETE CASCADE on the self-reference. Without it the reply would survive with a dangling
+        // parent and render as a top-level comment, changing what its author appeared to say.
+        commentRepository.deleteById(parent.id());
+        commentRepository.flush();
+
+        assertThat(commentRepository.findById(reply.id())).isEmpty();
     }
 
     @Test

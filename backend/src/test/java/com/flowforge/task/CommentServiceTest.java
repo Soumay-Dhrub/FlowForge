@@ -65,6 +65,9 @@ class CommentServiceTest {
 
     @BeforeEach
     void setUp() {
+        when(commentRepository.findById(any(UUID.class)))
+                .thenAnswer(call -> Optional.ofNullable(commentsById.get(call.<UUID>getArgument(0))));
+
         when(commentRepository.save(any(Comment.class))).thenAnswer(call -> {
             Comment comment = call.getArgument(0);
             if (comment.getId() == null) {
@@ -228,6 +231,102 @@ class CommentServiceTest {
                 .build();
         usersById.put(created.getId(), created);
         return created;
+    }
+
+    // ── threading (Requirement 15.1) ─────────────────────────────────────────────────────────────
+
+    @Test
+    void aReplyRecordsTheCommentItAnswers() {
+        CommentResponse parent =
+                commentService.addComment(instance.getId(), initiator.getId(), "Why this amount?");
+
+        CommentResponse reply = commentService.addComment(
+                instance.getId(), approver.getId(), "It covers two quarters.", parent.id());
+
+        assertThat(reply.parentId()).isEqualTo(parent.id());
+        assertThat(reply.isReply()).isTrue();
+        assertThat(parent.isReply()).as("the comment being answered is top-level").isFalse();
+    }
+
+    @Test
+    void aCommentWithNoParentIsTopLevel() {
+        CommentResponse posted =
+                commentService.addComment(instance.getId(), initiator.getId(), "A new point.", null);
+
+        assertThat(posted.parentId()).isNull();
+        assertThat(posted.isReply()).isFalse();
+    }
+
+    @Test
+    void theThreadIsReturnedFlatSoTheClientCanRebuildIt() {
+        CommentResponse first =
+                commentService.addComment(instance.getId(), initiator.getId(), "First point.");
+        CommentResponse reply = commentService.addComment(
+                instance.getId(), approver.getId(), "Answering the first.", first.id());
+        CommentResponse second =
+                commentService.addComment(instance.getId(), initiator.getId(), "Second point.");
+
+        List<CommentResponse> thread =
+                commentService.listComments(instance.getId(), initiator.getId());
+
+        // Written order, parents and replies alike: the reply names its parent, so nesting is the
+        // client's to render and no information about position is lost.
+        assertThat(thread).extracting(CommentResponse::id)
+                .containsExactly(first.id(), reply.id(), second.id());
+        assertThat(thread).extracting(CommentResponse::parentId)
+                .containsExactly(null, first.id(), null);
+    }
+
+    @Test
+    void replyingToAnUnknownCommentIsRejected() {
+        assertThatThrownBy(() -> commentService.addComment(
+                instance.getId(), initiator.getId(), "Answering nothing.", UUID.randomUUID()))
+                .isInstanceOf(EntityNotFoundException.class);
+
+        assertThat(commentsById).isEmpty();
+    }
+
+    @Test
+    void replyingToACommentOnAnotherRequestIsRejected() {
+        WorkflowInstance elsewhere = instance(initiator);
+        CommentResponse foreign =
+                commentService.addComment(elsewhere.getId(), initiator.getId(), "On another request.");
+
+        // The foreign key would allow this: it proves the row exists, not that it belongs to this
+        // conversation. Without the service check a reply could quote a comment its author cannot read.
+        assertThatThrownBy(() -> commentService.addComment(
+                instance.getId(), initiator.getId(), "Quoting across requests.", foreign.id()))
+                .isInstanceOf(AppException.class)
+                .satisfies(thrown -> {
+                    assertThat(((AppException) thrown).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+                    assertThat(thrown).hasMessageContaining("different request");
+                });
+    }
+
+    @Test
+    void replyingToAReplyIsRejectedSoTheThreadStaysOneLevelDeep() {
+        CommentResponse parent =
+                commentService.addComment(instance.getId(), initiator.getId(), "First point.");
+        CommentResponse reply = commentService.addComment(
+                instance.getId(), approver.getId(), "Answering it.", parent.id());
+
+        assertThatThrownBy(() -> commentService.addComment(
+                instance.getId(), initiator.getId(), "Answering the answer.", reply.id()))
+                .isInstanceOf(AppException.class)
+                .extracting(thrown -> ((AppException) thrown).getStatus())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void aNonParticipantCannotReplyEither() {
+        CommentResponse parent =
+                commentService.addComment(instance.getId(), initiator.getId(), "First point.");
+
+        assertThatThrownBy(() -> commentService.addComment(
+                instance.getId(), outsider.getId(), "Butting in.", parent.id()))
+                .isInstanceOf(AppException.class)
+                .extracting(thrown -> ((AppException) thrown).getStatus())
+                .isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     private WorkflowInstance instance(User initiatedBy) {

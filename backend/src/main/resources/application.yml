@@ -5,6 +5,13 @@ spring:
     password: ${DB_PASSWORD:flowforge}
     driver-class-name: org.postgresql.Driver
   jpa:
+    # Off deliberately. Left on (the default) the session stays open through response
+    # rendering, so a lazy association touched while serialising silently issues a query
+    # outside any transaction — it works, invisibly costs an extra round trip per field,
+    # and hides a missing fetch until some other caller reaches the same entity without a
+    # session and gets LazyInitializationException. Services already map entities to DTOs
+    # inside their @Transactional methods, which is where that work belongs.
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     show-sql: false

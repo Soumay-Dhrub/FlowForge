@@ -35,7 +35,10 @@ public class CommentController {
     private final CommentService commentService;
 
     /**
-     * Post a comment (Requirement 15.1). A blank body is 400; a non-participant is 403.
+     * Post a comment, or a reply to one (Requirement 15.1).
+     *
+     * <p>A blank body is 400; a non-participant is 403. A {@code parentId} naming a comment on another
+     * request, or one that is already a reply, is 400 — see {@link CommentService}.
      */
     @PostMapping
     @PreAuthorize("isAuthenticated()")
@@ -44,7 +47,8 @@ public class CommentController {
             @Valid @RequestBody CommentRequest request,
             @AuthenticationPrincipal UUID callerId
     ) {
-        CommentResponse posted = commentService.addComment(instanceId, callerId, request.body());
+        CommentResponse posted =
+                commentService.addComment(instanceId, callerId, request.body(), request.parentId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Comment posted", posted));
     }
