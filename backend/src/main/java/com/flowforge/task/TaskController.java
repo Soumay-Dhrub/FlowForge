@@ -1,12 +1,15 @@
 package com.flowforge.task;
 
 import com.flowforge.common.response.ApiResponse;
+import com.flowforge.task.dto.DelegateTasksRequest;
+import com.flowforge.task.dto.DelegationResponse;
 import com.flowforge.task.dto.TaskDecisionRequest;
 import com.flowforge.task.dto.TaskFilter;
 import com.flowforge.task.dto.TaskResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -15,6 +18,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -98,6 +102,32 @@ public class TaskController {
     ) {
         TaskResponse decided = taskService.recordDecision(id, callerId, request);
         return ResponseEntity.ok(ApiResponse.success("Decision recorded", decided));
+    }
+
+    /**
+     * Delegate the caller's pending tasks for a period (Requirements 16.1, 16.2).
+     *
+     * <p>The path names a task of the caller's — the one they were looking at when they decided to hand
+     * work over — and it is what authorises the request. The <em>effect</em> is the caller's whole pending
+     * queue, as Requirement 16.1 specifies, plus a delegation record so work assigned later in the window
+     * is routed too. {@code reassignedTaskIds} in the response says exactly which tasks moved, so the
+     * wider effect is never a surprise.
+     *
+     * <p>Open to any authenticated user: anyone who can hold a task can be away. Delegating from a task
+     * that is not the caller's is 403; a self-delegation or a nonsensical window is 400; an overlapping
+     * delegation or one that would loop is 409.
+     */
+    @PostMapping("/{id}/delegate")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<DelegationResponse>> delegate(
+            @PathVariable UUID id,
+            @Valid @RequestBody DelegateTasksRequest request,
+            @AuthenticationPrincipal UUID callerId
+    ) {
+        DelegationResponse delegation = taskService.delegateFromTask(id, callerId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
+                "%d pending task(s) delegated".formatted(delegation.reassignedTaskCount()),
+                delegation));
     }
 
     /**

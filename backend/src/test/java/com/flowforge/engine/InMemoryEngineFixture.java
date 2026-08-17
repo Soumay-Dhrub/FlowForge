@@ -16,6 +16,8 @@ import com.flowforge.notification.InAppNotificationService;
 import com.flowforge.notification.Notification;
 import com.flowforge.notification.NotificationRepository;
 import com.flowforge.notification.NotificationService;
+import com.flowforge.task.DelegationRepository;
+import com.flowforge.task.DelegationRouter;
 import com.flowforge.task.Task;
 import com.flowforge.task.TaskRepository;
 import com.flowforge.task.TaskStatus;
@@ -85,6 +87,7 @@ final class InMemoryEngineFixture {
     final WorkflowInstanceRepository instanceRepository = mock(WorkflowInstanceRepository.class);
     final UserRepository userRepository = mock(UserRepository.class);
     final TaskRepository taskRepository = mock(TaskRepository.class);
+    final DelegationRepository delegationRepository = mock(DelegationRepository.class);
     final NotificationRepository notificationRepository = mock(NotificationRepository.class);
     final AuditLogRepository auditLogRepository = mock(AuditLogRepository.class);
     final AuditLogService auditLogService = new AuditLogService(auditLogRepository);
@@ -99,6 +102,9 @@ final class InMemoryEngineFixture {
 
     /** The real collaborators the executors are built from. */
     final AssigneeResolver assigneeResolver = new AssigneeResolver(userRepository);
+
+    /** Delegation routing, over the same in-memory delegations a test declares. */
+    final DelegationRouter delegationRouter = new DelegationRouter(delegationRepository);
     final NotificationService notificationService =
             new InAppNotificationService(notificationRepository, userRepository);
     final ConditionEvaluator conditionEvaluator = new ConditionEvaluator();
@@ -173,6 +179,11 @@ final class InMemoryEngineFixture {
                             .sorted(Comparator.comparing(User::getCreatedAt).thenComparing(User::getId))
                             .toList();
                 });
+
+        // No delegations by default: an unstubbed mock returns null and the router would fail on the
+        // first assignment. A test that wants delegation routing stubs this itself.
+        when(delegationRepository.findActiveAt(any(UUID.class), any(Instant.class)))
+                .thenReturn(List.of());
 
         when(taskRepository.save(any(Task.class))).thenAnswer(call -> {
             Task task = call.getArgument(0);
@@ -317,7 +328,8 @@ final class InMemoryEngineFixture {
     }
 
     TaskNodeExecutor taskNodeExecutor() {
-        return new TaskNodeExecutor(taskRepository, assigneeResolver, auditLogService);
+        return new TaskNodeExecutor(
+                taskRepository, assigneeResolver, delegationRouter, auditLogService);
     }
 
     NotificationNodeExecutor notificationNodeExecutor() {
@@ -339,7 +351,8 @@ final class InMemoryEngineFixture {
     }
 
     ApprovalNodeExecutor approvalNodeExecutor() {
-        return new ApprovalNodeExecutor(taskRepository, assigneeResolver, auditLogService);
+        return new ApprovalNodeExecutor(
+                taskRepository, assigneeResolver, delegationRouter, auditLogService);
     }
 
     /** Register the Condition and Approval executors task 18 delivers. */

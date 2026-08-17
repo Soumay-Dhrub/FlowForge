@@ -46,6 +46,9 @@ public class AuditLogService {
     /** Entity type discriminator for {@link com.flowforge.task.Comment} rows. */
     public static final String ENTITY_COMMENT = "Comment";
 
+    /** Entity type discriminator for {@link com.flowforge.task.Delegation} rows. */
+    public static final String ENTITY_DELEGATION = "Delegation";
+
     public static final String ACTION_CREATE_USER = "CREATE_USER";
     public static final String ACTION_UPDATE_USER = "UPDATE_USER";
     public static final String ACTION_STATUS_CHANGE = "STATUS_CHANGE";
@@ -64,6 +67,12 @@ public class AuditLogService {
     public static final String ACTION_CANCEL_INSTANCE = "CANCEL_INSTANCE";
     public static final String ACTION_UPLOAD_ATTACHMENT = "UPLOAD_ATTACHMENT";
     public static final String ACTION_POST_COMMENT = "POST_COMMENT";
+    /** A delegation was created, covering a period (Requirement 16.1). */
+    public static final String ACTION_DELEGATE_TASKS = "DELEGATE_TASKS";
+    /** One task changed hands as part of a delegation. */
+    public static final String ACTION_DELEGATE_TASK = "DELEGATE_TASK";
+    /** A delegation's window closed and routing returned to the delegator (Requirement 16.3). */
+    public static final String ACTION_EXPIRE_DELEGATION = "EXPIRE_DELEGATION";
 
     private final AuditLogRepository auditLogRepository;
 

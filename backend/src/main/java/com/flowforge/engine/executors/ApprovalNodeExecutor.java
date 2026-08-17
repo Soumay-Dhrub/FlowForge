@@ -3,6 +3,7 @@ package com.flowforge.engine.executors;
 import com.flowforge.audit.AuditLogService;
 import com.flowforge.engine.NodeExecutor;
 import com.flowforge.engine.WorkflowInstance;
+import com.flowforge.task.DelegationRouter;
 import com.flowforge.task.Task;
 import com.flowforge.task.TaskRepository;
 import com.flowforge.task.TaskStatus;
@@ -62,6 +63,11 @@ import java.util.Optional;
  * <p>Notifying the approver (Requirement 17.1) is task 26's, for the same reason it is not done in the
  * Task node: the assignment event should be raised in one place for creation, delegation and escalation
  * alike.
+ *
+ * <p>The resolved approver does pass through {@link DelegationRouter} (Requirement 16.2). Wiring it here
+ * as well as in the Task node is not duplication for its own sake: Requirement 16 is written about
+ * approvals — "delegate my pending approval tasks" — so an Approval node that ignored delegations would
+ * miss the case the feature exists for.
  */
 @Component
 @RequiredArgsConstructor
@@ -83,6 +89,7 @@ public class ApprovalNodeExecutor implements NodeExecutor, NodeConfigRule {
 
     private final TaskRepository taskRepository;
     private final AssigneeResolver assigneeResolver;
+    private final DelegationRouter delegationRouter;
     private final AuditLogService auditLogService;
 
     @Override
@@ -108,8 +115,15 @@ public class ApprovalNodeExecutor implements NodeExecutor, NodeConfigRule {
             return;
         }
 
-        User approver = assigneeResolver.resolveAssignee(
+        User configured = assigneeResolver.resolveAssignee(
                 node, CONFIG_APPROVER_USER_ID, CONFIG_APPROVER_ROLE);
+        // Requirement 16.2, and the case that requirement is actually written about: "delegate my pending
+        // approval tasks". An approval raised while the named approver is away goes to their delegate.
+        User approver = delegationRouter.routeTo(configured, Instant.now());
+        if (!approver.getId().equals(configured.getId())) {
+            log.info("Approval node {} routed from approver {} to delegate {}",
+                    node.getId(), configured.getId(), approver.getId());
+        }
         Instant dueAt = dueAt(node);
 
         Task task = taskRepository.save(Task.builder()

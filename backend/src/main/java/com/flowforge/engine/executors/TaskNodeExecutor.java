@@ -3,6 +3,7 @@ package com.flowforge.engine.executors;
 import com.flowforge.audit.AuditLogService;
 import com.flowforge.engine.NodeExecutor;
 import com.flowforge.engine.WorkflowInstance;
+import com.flowforge.task.DelegationRouter;
 import com.flowforge.task.Task;
 import com.flowforge.task.TaskRepository;
 import com.flowforge.task.TaskStatus;
@@ -55,6 +56,11 @@ import java.util.Optional;
  * <p>An unresolvable assignee fails loudly rather than producing an unowned task; the reasoning lives
  * in {@link AssigneeResolver}.
  *
+ * <p>The resolved assignee is then passed through {@link DelegationRouter}, so a task raised while that
+ * person has delegated their work goes to whoever is covering (Requirement 16.2). The order matters: the
+ * definition decides who owns the step, and delegation decides who acts on it now — so a delegation can
+ * never be defeated by a node naming its subject directly.
+ *
  * <p>Re-executing a node that already has an open task does not duplicate it. {@code advance} always
  * executes the node the instance sits on, so an extra call against a waiting instance would otherwise
  * mint a second task for the same step and let one decision leave the other stranded.
@@ -84,6 +90,7 @@ public class TaskNodeExecutor implements NodeExecutor, NodeConfigRule {
 
     private final TaskRepository taskRepository;
     private final AssigneeResolver assigneeResolver;
+    private final DelegationRouter delegationRouter;
     private final AuditLogService auditLogService;
 
     @Override
@@ -107,8 +114,16 @@ public class TaskNodeExecutor implements NodeExecutor, NodeConfigRule {
             return;
         }
 
-        User assignee = assigneeResolver.resolveAssignee(
+        User configured = assigneeResolver.resolveAssignee(
                 node, CONFIG_ASSIGNEE_USER_ID, CONFIG_ASSIGNEE_ROLE);
+        // Requirement 16.2: the definition names who owns this step; a delegation says who is covering
+        // for them today. The graph is asked first and the people second, so an absent assignee's work
+        // never lands in a queue nobody is reading.
+        User assignee = delegationRouter.routeTo(configured, Instant.now());
+        if (!assignee.getId().equals(configured.getId())) {
+            log.info("Node {} assignment for user {} redirected to delegate {}",
+                    node.getId(), configured.getId(), assignee.getId());
+        }
         Instant dueAt = dueAt(node);
 
         Task task = taskRepository.save(Task.builder()

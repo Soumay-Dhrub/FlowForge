@@ -26,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -200,9 +201,15 @@ class RejectionRequiresCommentPropertyTest {
             });
 
             reviewer = user("Grace Hopper");
+            // Delegation plays no part in this property, so the repository is left inert and the router
+            // is built over it: routeTo then simply returns whoever it was given.
+            DelegationRepository delegationRepository = mock(DelegationRepository.class);
+            when(delegationRepository.findActiveAt(any(UUID.class), any(Instant.class)))
+                    .thenReturn(List.of());
             taskService = new TaskService(
                     taskRepository, approvalRepository, userRepository, engine,
-                    notificationService, new AuditLogService(auditLogRepository));
+                    notificationService, new AuditLogService(auditLogRepository),
+                    delegationRepository, new DelegationRouter(delegationRepository));
         }
 
         /** A PENDING task assigned to the reviewer, on an instance the reviewer did not initiate. */
