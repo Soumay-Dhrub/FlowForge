@@ -105,7 +105,7 @@ export function UserProfileForm({ userId }: { userId: string }) {
     const missing = isStatusError(profile.error, 404);
     return (
       <div className="mx-auto max-w-md text-center">
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger-700">
           {missing
             ? "That user does not exist."
             : extractErrorMessage(profile.error, "Could not load this profile.")}
@@ -204,7 +204,7 @@ export function UserProfileForm({ userId }: { userId: string }) {
         </SelectField>
 
         {errors.root?.message ? (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger-700">
             {errors.root.message}
           </p>
         ) : null}

@@ -165,7 +165,7 @@ export function NodePropertiesPanel({
           <button
             type="button"
             onClick={() => setValue(userIdKey, "")}
-            className="text-xs font-medium text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="text-xs font-medium text-primary-700 hover:underline"
           >
             Clear this user and assign by role
           </button>
@@ -221,7 +221,7 @@ export function NodePropertiesPanel({
         <button
           type="button"
           onClick={() => onRemoveNode(node.id)}
-          className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
         >
           <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
           Remove node
@@ -319,7 +319,7 @@ export function NodePropertiesPanel({
                   <button
                     type="button"
                     onClick={() => onEditEdgeCondition(edge)}
-                    className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-left text-xs font-medium text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-left text-xs font-medium text-gray-800 hover:bg-gray-50"
                   >
                     Edit condition on {describeEdge(graph, edge)}
                     <span className="mt-0.5 block font-normal text-gray-600">

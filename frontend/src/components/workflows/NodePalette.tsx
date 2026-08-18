@@ -42,7 +42,7 @@ export function NodePalette({
                 event.dataTransfer.effectAllowed = "move";
               }}
               onClick={() => onAddNode(entry.type)}
-              className="flex w-full items-start gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-2 text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-start gap-2 rounded-md border border-gray-300 bg-white px-2.5 py-2 text-left hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <GripVertical aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
               <span>

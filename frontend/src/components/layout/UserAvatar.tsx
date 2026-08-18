@@ -47,7 +47,7 @@ export function UserAvatar() {
         onClick={toggle}
         aria-expanded={open}
         aria-controls="profile-menu"
-        className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-gray-100 focus:ring-offset-2"
       >
         <span
           aria-hidden="true"
@@ -64,7 +64,7 @@ export function UserAvatar() {
       {open ? (
         <div
           id="profile-menu"
-          className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-gray-200 bg-white shadow-lg"
+          className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-gray-200 bg-white shadow-popover"
         >
           <div className="border-b border-gray-200 px-4 py-3">
             <p className="text-sm font-medium text-gray-900">{user.name}</p>

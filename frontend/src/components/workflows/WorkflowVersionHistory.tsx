@@ -105,7 +105,7 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
     const missing = isStatusError(workflow.error, 404);
     return (
       <div className="mx-auto max-w-md text-center">
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger-700">
           {missing
             ? "That workflow does not exist."
             : extractErrorMessage(workflow.error, "Could not load this workflow.")}
@@ -118,7 +118,7 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
           <button
             type="button"
             onClick={() => workflow.refetch()}
-            className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Try again
           </button>
@@ -147,7 +147,7 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
         {/* The builder edits the newest unpublished version; it says so itself when there is none. */}
         <Link
           href={`/workflows/${definition.id}/edit`}
-          className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:ring-offset-2"
         >
           <Pencil aria-hidden="true" className="h-4 w-4" />
           Open builder
@@ -169,17 +169,17 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
       </dl>
 
       {notice ? (
-        <p role="status" className="mt-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
+        <p role="status" className="mt-4 rounded-md bg-success-50 px-3 py-2 text-sm text-success-800">
           {notice}
         </p>
       ) : null}
       {actionError ? (
-        <p role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="mt-4 rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-700">
           {actionError}
         </p>
       ) : null}
       {publishFailure ? (
-        <div role="alert" className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-800">
+        <div role="alert" className="mt-4 rounded-md bg-danger-50 p-3 text-sm text-red-800">
           <p className="font-medium">{publishFailure.message}</p>
           {publishFailure.violations.length > 0 ? (
             <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -192,7 +192,7 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
       ) : null}
 
       <h2 className="mt-8 text-lg font-semibold text-gray-900">Version history</h2>
-      <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 bg-white">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <caption className="sr-only">
             Versions of {definition.name}, newest first, with publish timestamps and author
@@ -239,7 +239,7 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                           version.isPublished
-                            ? "bg-green-100 text-green-800"
+                            ? "bg-green-100 text-success-800"
                             : "bg-gray-100 text-gray-700"
                         }`}
                       >
@@ -260,7 +260,7 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
                         type="button"
                         onClick={() => setExpandedVersionId(expanded ? null : version.id)}
                         aria-expanded={expanded}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
                       >
                         {expanded ? (
                           <ChevronDown aria-hidden="true" className="h-3.5 w-3.5" />
@@ -275,7 +275,7 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
                         onClick={() => clone.mutate(version)}
                         disabled={clone.isPending}
                         aria-busy={cloning}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <Copy aria-hidden="true" className="h-3.5 w-3.5" />
                         {cloning
@@ -289,7 +289,7 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
                           onClick={() => publish.mutate(version)}
                           disabled={publish.isPending}
                           aria-busy={publishing}
-                          className="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-primary-700 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {publishing ? "Publishing…" : `Publish version ${version.versionNumber}`}
                         </button>

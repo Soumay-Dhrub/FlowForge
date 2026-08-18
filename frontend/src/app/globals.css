@@ -2,12 +2,94 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-rgb: 255, 255, 255;
+@layer base {
+  /*
+   * Focus rings are visible only for keyboard users. `:focus` alone puts a ring on every clicked
+   * button, which people read as "stuck" and which historically leads to `outline: none` and an
+   * interface nobody can navigate by keyboard. `:focus-visible` gives keyboard users a strong,
+   * consistent ring and mouse users nothing.
+   */
+  :where(a, button, input, select, textarea, [tabindex]):focus {
+    outline: none;
+  }
+
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid theme("colors.primary.500");
+    outline-offset: 2px;
+    border-radius: theme("borderRadius.sm");
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-800 antialiased;
+    /* Inter's default figures are proportional, which makes columns of numbers in a table jitter as
+       they update. Tabular figures keep them aligned. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Headings carry weight rather than size alone, so a dense page still has hierarchy. */
+  h1,
+  h2,
+  h3 {
+    @apply text-gray-900;
+    text-wrap: balance;
+  }
+
+  /* Long prose and comment bodies read better without orphans. */
+  p {
+    text-wrap: pretty;
+  }
+
+  /*
+   * A date or an id should not be the reason a table scrolls sideways, and `time` and ids are the
+   * two things people compare across rows.
+   */
+  time {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Respect a stated preference for less motion: transitions become instant rather than merely fast. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
+@layer components {
+  /*
+   * A skeleton block. Used while a table or card is loading, in place of a spinner: showing the shape
+   * of what is coming makes the wait feel shorter and stops the layout jumping when it arrives.
+   */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-gray-200/70;
+  }
+
+  .skeleton::after {
+    @apply absolute inset-0;
+    content: "";
+    background-image: linear-gradient(
+      90deg,
+      rgb(255 255 255 / 0) 0%,
+      rgb(255 255 255 / 0.45) 50%,
+      rgb(255 255 255 / 0) 100%
+    );
+    transform: translateX(-100%);
+    animation: shimmer 1.4s infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+      animation: none;
+    }
+  }
 }

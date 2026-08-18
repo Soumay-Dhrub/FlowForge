@@ -119,7 +119,7 @@ export function Modal({ open, onClose, title, description, children }: ModalProp
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
           >
             <X aria-hidden="true" className="h-4 w-4" />
             <span className="sr-only">Close</span>

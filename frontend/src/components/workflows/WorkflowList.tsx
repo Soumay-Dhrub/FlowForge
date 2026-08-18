@@ -27,8 +27,8 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 const STATUS_STYLES: Record<Workflow["status"], string> = {
   DRAFT: "bg-gray-100 text-gray-700",
-  ACTIVE: "bg-green-100 text-green-800",
-  ARCHIVED: "bg-amber-100 text-amber-800",
+  ACTIVE: "bg-green-100 text-success-800",
+  ARCHIVED: "bg-amber-100 text-warning-800",
 };
 
 export function WorkflowList() {
@@ -85,7 +85,7 @@ export function WorkflowList() {
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:ring-offset-2"
         >
           <Plus aria-hidden="true" className="h-4 w-4" />
           New workflow
@@ -113,17 +113,17 @@ export function WorkflowList() {
       </div>
 
       {notice ? (
-        <p role="status" className="mt-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
+        <p role="status" className="mt-4 rounded-md bg-success-50 px-3 py-2 text-sm text-success-800">
           {notice}
         </p>
       ) : null}
       {cloneError ? (
-        <p role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="mt-4 rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-700">
           {cloneError}
         </p>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <caption className="sr-only">Workflows, newest first</caption>
           <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
@@ -160,13 +160,13 @@ export function WorkflowList() {
             {workflows.isError ? (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center">
-                  <p role="alert" className="text-sm text-red-700">
+                  <p role="alert" className="text-sm text-danger-700">
                     {extractErrorMessage(workflows.error, "Could not load workflows.")}
                   </p>
                   <button
                     type="button"
                     onClick={() => workflows.refetch()}
-                    className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Try again
                   </button>
@@ -189,7 +189,7 @@ export function WorkflowList() {
                 <th scope="row" className="px-4 py-3 text-left font-medium text-gray-900">
                   <Link
                     href={`/workflows/${workflow.id}`}
-                    className="text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="text-primary-700 hover:underline"
                   >
                     {workflow.name}
                   </Link>
@@ -214,7 +214,7 @@ export function WorkflowList() {
                     onClick={() => clone.mutate(workflow)}
                     disabled={clone.isPending}
                     aria-busy={clone.isPending && clone.variables?.id === workflow.id}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Copy aria-hidden="true" className="h-3.5 w-3.5" />
                     {clone.isPending && clone.variables?.id === workflow.id

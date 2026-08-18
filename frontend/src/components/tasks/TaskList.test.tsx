@@ -209,13 +209,16 @@ describe("TaskList", () => {
   it("distinguishes an empty filtered result from an empty queue", async () => {
     renderList();
 
-    expect(
-      await screen.findByText("You have no tasks. Anything assigned to you will appear here."),
-    ).toBeInTheDocument();
+    // An empty queue is good news and needs no action; an empty filtered result means the filters are
+    // hiding something. The two must not read the same.
+    expect(await screen.findByText("Nothing waiting on you")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Clear filters/i })).not.toBeInTheDocument();
 
     await userEvent.selectOptions(screen.getByLabelText("Status"), "COMPLETED");
 
-    expect(await screen.findByText("No tasks match these filters.")).toBeInTheDocument();
+    expect(await screen.findByText("No tasks match these filters")).toBeInTheDocument();
+    // ...and offers a way out of them.
+    expect(screen.getAllByRole("button", { name: /Clear filters/i }).length).toBeGreaterThan(0);
   });
 
   it("reports a failed request as an error, not as an empty queue", async () => {
@@ -225,8 +228,6 @@ describe("TaskList", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load tasks.");
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
-    expect(
-      screen.queryByText("You have no tasks. Anything assigned to you will appear here."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Nothing waiting on you")).not.toBeInTheDocument();
   });
 });

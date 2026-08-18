@@ -54,8 +54,8 @@ export function SidebarNav({ role }: { role: RoleName | undefined }) {
   const items = navItemsForRole(role);
 
   return (
-    <nav aria-label="Main navigation" className="p-3">
-      <ul className="space-y-1">
+    <nav aria-label="Main navigation" className="px-3 py-3">
+      <ul className="space-y-0.5">
         {items.map(({ href, label, icon: Icon }) => {
           const active = isActive(pathname, href);
           return (
@@ -63,13 +63,30 @@ export function SidebarNav({ role }: { role: RoleName | undefined }) {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                className={`group relative flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
                   active
-                    ? "bg-primary-50 text-primary-700"
-                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    ? "bg-primary-50 font-semibold text-primary-700"
+                    : "font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
-                <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+                {/*
+                  A bar as well as the tint. The tint alone is a ~4% brightness difference, which is
+                  invisible on a dim or badly calibrated monitor and carries nothing for anyone who
+                  cannot separate the hues — and "which page am I on" is the one thing navigation must
+                  never be ambiguous about.
+                */}
+                {active ? (
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-primary-600"
+                  />
+                ) : null}
+                <Icon
+                  aria-hidden="true"
+                  className={`h-4 w-4 shrink-0 transition-colors ${
+                    active ? "text-primary-600" : "text-gray-400 group-hover:text-gray-600"
+                  }`}
+                />
                 {label}
               </Link>
             </li>

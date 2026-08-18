@@ -88,7 +88,7 @@ export function CreateWorkflowModal({ open, onClose, onCreated }: CreateWorkflow
         </div>
 
         {errors.root?.message ? (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger-700">
             {errors.root.message}
           </p>
         ) : null}

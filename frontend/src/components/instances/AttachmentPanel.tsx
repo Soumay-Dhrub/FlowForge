@@ -133,12 +133,12 @@ export function AttachmentPanel({ instanceId }: { instanceId: string }) {
       </div>
 
       {error ? (
-        <p id="attachment-error" role="alert" className="mt-2 text-sm text-red-700">
+        <p id="attachment-error" role="alert" className="mt-2 text-sm text-danger-700">
           {error}
         </p>
       ) : null}
       {notice ? (
-        <p role="status" className="mt-2 text-sm text-green-800">
+        <p role="status" className="mt-2 text-sm text-success-800">
           {notice}
         </p>
       ) : null}
@@ -151,7 +151,7 @@ export function AttachmentPanel({ instanceId }: { instanceId: string }) {
       ) : null}
 
       {attachments.isError ? (
-        <p role="alert" className="mt-3 text-sm text-red-700">
+        <p role="alert" className="mt-3 text-sm text-danger-700">
           {extractErrorMessage(attachments.error, "Could not load the attachments.")}
         </p>
       ) : null}
@@ -161,7 +161,7 @@ export function AttachmentPanel({ instanceId }: { instanceId: string }) {
       ) : null}
 
       {rows.length > 0 ? (
-        <ul className="mt-3 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white text-sm">
+        <ul className="mt-3 divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white text-sm">
           {rows.map((attachment) => (
             <li key={attachment.id} className="flex items-center gap-3 px-4 py-3">
               <Paperclip aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-400" />

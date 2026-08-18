@@ -56,7 +56,7 @@ export function ResetPasswordForm() {
       <div className="space-y-4">
         <div
           role="alert"
-          className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+          className="rounded-md border border-danger-200 bg-danger-50 px-3 py-2 text-sm text-danger-700"
         >
           This reset link is missing its token. Request a new link to continue.
         </div>
@@ -79,7 +79,7 @@ export function ResetPasswordForm() {
         <button
           type="button"
           onClick={() => router.replace("/login")}
-          className="w-full rounded-md bg-primary-600 px-4 py-2 font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          className="w-full rounded-md bg-primary-600 px-4 py-2 font-medium text-white hover:bg-primary-700 focus:ring-offset-2"
         >
           Go to sign in
         </button>
@@ -92,7 +92,7 @@ export function ResetPasswordForm() {
       {formError ? (
         <div
           role="alert"
-          className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+          className="rounded-md border border-danger-200 bg-danger-50 px-3 py-2 text-sm text-danger-700"
         >
           {formError}
         </div>

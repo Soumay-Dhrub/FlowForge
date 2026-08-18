@@ -112,7 +112,7 @@ export function NotificationBell() {
         aria-controls="notification-panel"
         // The badge is a number in a coloured circle; the accessible name carries the same fact.
         aria-label={`Notifications (${unreadText})`}
-        className="relative rounded-full p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+        className="relative rounded-full p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:ring-offset-2"
       >
         <Bell aria-hidden="true" className="h-5 w-5" />
         {unreadCount > 0 ? (
@@ -134,7 +134,7 @@ export function NotificationBell() {
       {open ? (
         <div
           id="notification-panel"
-          className="absolute right-0 z-20 mt-2 w-80 rounded-lg border border-gray-200 bg-white shadow-lg"
+          className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-gray-200 bg-white shadow-popover"
         >
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2">
             <h2 className="text-sm font-semibold text-gray-900">Notifications</h2>
@@ -144,7 +144,7 @@ export function NotificationBell() {
           </div>
 
           {notificationsQuery.isError ? (
-            <p role="alert" className="px-4 py-6 text-sm text-red-600">
+            <p role="alert" className="px-4 py-6 text-sm text-danger-700">
               Could not load notifications.
             </p>
           ) : notificationsQuery.isPending ? (
@@ -199,7 +199,7 @@ export function NotificationBell() {
                 close();
                 triggerRef.current?.focus();
               }}
-              className="text-xs font-medium text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="text-xs font-medium text-gray-600 hover:text-gray-900"
             >
               Close
             </button>

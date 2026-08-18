@@ -123,7 +123,7 @@ export function TaskDecisionForm({ task, onDecided }: { task: Task; onDecided?: 
           </label>
         ))}
         {errors.decision?.message ? (
-          <p id={decisionErrorId} role="alert" className="text-sm text-red-600">
+          <p id={decisionErrorId} role="alert" className="text-sm text-danger-700">
             {errors.decision.message}
           </p>
         ) : null}
@@ -139,7 +139,7 @@ export function TaskDecisionForm({ task, onDecided }: { task: Task; onDecided?: 
           aria-invalid={errors.comment ? true : undefined}
           aria-describedby={commentDescribedBy}
           className={`w-full rounded-md border px-3 py-2 text-gray-900 shadow-sm outline-none focus:ring-2 focus:ring-primary-500 ${
-            errors.comment ? "border-red-500" : "border-gray-300"
+            errors.comment ? "border-danger-600" : "border-gray-300"
           }`}
           {...register("comment")}
         />
@@ -149,14 +149,14 @@ export function TaskDecisionForm({ task, onDecided }: { task: Task; onDecided?: 
             : "Optional when approving."}
         </p>
         {errors.comment?.message ? (
-          <p id={commentErrorId} role="alert" className="text-sm text-red-600">
+          <p id={commentErrorId} role="alert" className="text-sm text-danger-700">
             {errors.comment.message}
           </p>
         ) : null}
       </div>
 
       {errors.root?.message ? (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-700">
           {errors.root.message}
         </p>
       ) : null}

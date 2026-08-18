@@ -337,7 +337,7 @@ export function WorkflowBuilder({ workflowId }: { workflowId: string }) {
     const missing = isStatusError(workflowQuery.error, 404);
     return (
       <div className="mx-auto max-w-md text-center">
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger-700">
           {missing
             ? "That workflow does not exist."
             : extractErrorMessage(workflowQuery.error, "Could not load this workflow.")}
@@ -355,7 +355,7 @@ export function WorkflowBuilder({ workflowId }: { workflowId: string }) {
     return (
       <div className="mx-auto max-w-lg text-center">
         <h1 className="text-xl font-semibold text-gray-900">{definition.name}</h1>
-        <p role="alert" className="mt-3 text-sm text-amber-800">
+        <p role="alert" className="mt-3 text-sm text-warning-800">
           Every version of this workflow is published, and a published version cannot be edited.
           Publishing normally opens the next draft; clone a version to carry its graph into a new
           workflow you can edit.
@@ -409,7 +409,7 @@ export function WorkflowBuilder({ workflowId }: { workflowId: string }) {
             onClick={() => save.mutate()}
             disabled={save.isPending}
             aria-busy={save.isPending}
-            className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save aria-hidden="true" className="h-4 w-4" />
             {save.isPending ? "Saving…" : "Save draft"}
@@ -422,7 +422,7 @@ export function WorkflowBuilder({ workflowId }: { workflowId: string }) {
               disabled={publish.isPending || dirty}
               aria-busy={publish.isPending}
               title={dirty ? "Save the draft before publishing." : undefined}
-              className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Upload aria-hidden="true" className="h-4 w-4" />
               {publish.isPending ? "Publishing…" : "Publish"}
@@ -432,17 +432,17 @@ export function WorkflowBuilder({ workflowId }: { workflowId: string }) {
       </div>
 
       {dirty ? (
-        <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="mt-3 rounded-md bg-warning-50 px-3 py-2 text-sm text-warning-800">
           Unsaved changes. Publishing uses the stored draft, so save before publishing.
         </p>
       ) : null}
       {notice ? (
-        <p role="status" className="mt-3 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
+        <p role="status" className="mt-3 rounded-md bg-success-50 px-3 py-2 text-sm text-success-800">
           {notice}
         </p>
       ) : null}
       {actionError ? (
-        <p role="alert" className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="mt-3 rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-700">
           {actionError}
         </p>
       ) : null}
@@ -513,14 +513,14 @@ export function WorkflowBuilder({ workflowId }: { workflowId: string }) {
                     <button
                       type="button"
                       onClick={() => setEditingEdgeId(edge.id)}
-                      className="rounded-md border border-gray-300 px-2 py-0.5 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="rounded-md border border-gray-300 px-2 py-0.5 font-medium text-gray-700 hover:bg-gray-50"
                     >
                       Edit condition on {describeEdge(currentGraph, edge)}
                     </button>
                     <button
                       type="button"
                       onClick={() => removeEdge(edge.id)}
-                      className="rounded-md border border-gray-300 px-2 py-0.5 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="rounded-md border border-gray-300 px-2 py-0.5 font-medium text-gray-700 hover:bg-gray-50"
                     >
                       Remove edge {describeEdge(currentGraph, edge)}
                     </button>
@@ -531,7 +531,7 @@ export function WorkflowBuilder({ workflowId }: { workflowId: string }) {
           </section>
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-3">
           <NodePropertiesPanel
             graph={currentGraph}
             node={selectedNode}
@@ -585,7 +585,7 @@ function ViolationList({
   };
 
   return (
-    <div role="alert" className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">
+    <div role="alert" className="mt-3 rounded-md bg-danger-50 p-3 text-sm text-red-800">
       <p className="font-medium">{title}</p>
       {violations.length > 0 ? (
         <ul className="mt-2 list-disc space-y-1 pl-5">

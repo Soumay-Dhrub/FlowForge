@@ -78,7 +78,7 @@ export function UserList() {
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:ring-offset-2"
         >
           <Plus aria-hidden="true" className="h-4 w-4" />
           New user
@@ -86,17 +86,17 @@ export function UserList() {
       </div>
 
       {notice ? (
-        <p role="status" className="mt-4 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
+        <p role="status" className="mt-4 rounded-md bg-success-50 px-3 py-2 text-sm text-success-800">
           {notice}
         </p>
       ) : null}
       {actionError ? (
-        <p role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="mt-4 rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-700">
           {actionError}
         </p>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <caption className="sr-only">Users, newest first</caption>
           <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
@@ -139,13 +139,13 @@ export function UserList() {
             {users.isError ? (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center">
-                  <p role="alert" className="text-sm text-red-700">
+                  <p role="alert" className="text-sm text-danger-700">
                     {extractErrorMessage(users.error, "Could not load users.")}
                   </p>
                   <button
                     type="button"
                     onClick={() => users.refetch()}
-                    className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Try again
                   </button>
@@ -168,7 +168,7 @@ export function UserList() {
                   <th scope="row" className="px-4 py-3 text-left font-medium text-gray-900">
                     <Link
                       href={`/users/${row.id}`}
-                      className="text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="text-primary-700 hover:underline"
                     >
                       {row.name}
                     </Link>
@@ -179,7 +179,7 @@ export function UserList() {
                   <td className="px-4 py-3">
                     <span
                       className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                        row.isActive ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"
+                        row.isActive ? "bg-green-100 text-success-800" : "bg-gray-200 text-gray-700"
                       }`}
                     >
                       {row.isActive ? "Active" : "Inactive"}
@@ -192,7 +192,7 @@ export function UserList() {
                       onClick={() => toggleStatus.mutate(row)}
                       disabled={toggleStatus.isPending}
                       aria-busy={pending}
-                      className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {pending
                         ? "Saving…"

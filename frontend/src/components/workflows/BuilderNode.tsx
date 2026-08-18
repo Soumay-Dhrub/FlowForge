@@ -20,10 +20,10 @@ import {
 import type { NodeType } from "@/types";
 
 const NODE_STYLES: Record<NodeType, string> = {
-  START: "border-green-400 bg-green-50 text-green-900",
+  START: "border-green-400 bg-success-50 text-green-900",
   TASK: "border-primary-300 bg-primary-50 text-primary-900",
   APPROVAL: "border-indigo-300 bg-indigo-50 text-indigo-900",
-  CONDITION: "border-amber-300 bg-amber-50 text-amber-900",
+  CONDITION: "border-amber-300 bg-warning-50 text-amber-900",
   NOTIFICATION: "border-sky-300 bg-sky-50 text-sky-900",
   AND_JOIN: "border-purple-300 bg-purple-50 text-purple-900",
   END: "border-gray-400 bg-gray-100 text-gray-900",

@@ -78,7 +78,7 @@ export function CommentThread({ instanceId }: { instanceId: string }) {
       ) : null}
 
       {comments.isError ? (
-        <p role="alert" className="mt-2 text-sm text-red-700">
+        <p role="alert" className="mt-2 text-sm text-danger-700">
           {extractErrorMessage(comments.error, "Could not load the discussion.")}
         </p>
       ) : null}
@@ -111,7 +111,7 @@ export function CommentThread({ instanceId }: { instanceId: string }) {
                   setReplyTo(comment);
                   setError(null);
                 }}
-                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-700 hover:underline"
               >
                 <MessageSquare aria-hidden="true" className="h-3 w-3" />
                 Reply
@@ -129,7 +129,7 @@ export function CommentThread({ instanceId }: { instanceId: string }) {
             <button
               type="button"
               onClick={() => setReplyTo(null)}
-              className="ml-2 font-medium text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="ml-2 font-medium text-primary-700 hover:underline"
             >
               Cancel
             </button>
@@ -148,11 +148,11 @@ export function CommentThread({ instanceId }: { instanceId: string }) {
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? "comment-error" : undefined}
           className={`w-full rounded-md border px-3 py-2 text-gray-900 shadow-sm outline-none focus:ring-2 focus:ring-primary-500 ${
-            error ? "border-red-500" : "border-gray-300"
+            error ? "border-danger-600" : "border-gray-300"
           }`}
         />
         {error ? (
-          <p id="comment-error" role="alert" className="text-sm text-red-600">
+          <p id="comment-error" role="alert" className="text-sm text-danger-700">
             {error}
           </p>
         ) : null}
@@ -167,7 +167,7 @@ export function CommentThread({ instanceId }: { instanceId: string }) {
 
 function CommentCard({ comment }: { comment: Comment }) {
   return (
-    <article className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
+    <article className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm">
       <header className="flex flex-wrap items-baseline gap-x-2">
         <span className="font-medium text-gray-900">{comment.authorName ?? "Unknown author"}</span>
         <time dateTime={comment.createdAt} className="text-xs text-gray-500">

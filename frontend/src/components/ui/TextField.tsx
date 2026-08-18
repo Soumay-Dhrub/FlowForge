@@ -10,7 +10,16 @@ type TextFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
   hint?: string;
 };
 
-/** Labelled text input with its error message programmatically associated to the field. */
+/**
+ * Labelled text input with its error message programmatically associated to the field.
+ *
+ * The invalid state is a red border *and* a message. Border colour alone is both invisible to anyone who
+ * cannot separate red from grey and useless for saying what is actually wrong, which is the part the
+ * person filling in the form needs.
+ *
+ * Height matches Button's `md` (36px) so a field and a button on one row line up instead of missing each
+ * other by a couple of pixels.
+ */
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
   { id, label, error, hint, className = "", ...inputProps },
   ref,
@@ -20,7 +29,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
   const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(" ");
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <label htmlFor={id} className="block text-sm font-medium text-gray-700">
         {label}
       </label>
@@ -29,8 +38,8 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
         ref={ref}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy || undefined}
-        className={`w-full rounded-md border px-3 py-2 text-gray-900 shadow-sm outline-none focus:ring-2 focus:ring-primary-500 ${
-          error ? "border-red-500" : "border-gray-300"
+        className={`h-9 w-full rounded-md border bg-white px-3 text-sm text-gray-900 shadow-xs transition-colors placeholder:text-gray-400 hover:border-gray-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 ${
+          error ? "border-danger-600" : "border-gray-300"
         } ${className}`}
         {...inputProps}
       />
@@ -40,7 +49,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} role="alert" className="text-sm text-red-600">
+        <p id={errorId} role="alert" className="text-sm text-danger-700">
           {error}
         </p>
       ) : null}

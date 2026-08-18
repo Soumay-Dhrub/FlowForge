@@ -77,7 +77,7 @@ function Canvas({
       ref={wrapper}
       role="group"
       aria-label="Workflow canvas"
-      className="h-[32rem] w-full rounded-lg border border-gray-200 bg-white"
+      className="h-[32rem] w-full rounded-xl border border-gray-200 bg-white"
       onDrop={onDrop}
       onDragOver={(event) => {
         event.preventDefault();

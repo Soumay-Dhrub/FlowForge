@@ -152,12 +152,12 @@ export function CreateUserModal({ open, onClose, onCreated }: CreateUserModalPro
         </SelectField>
 
         {optionsFailed ? (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger-700">
             Could not load the role and department options. Close this dialog and try again.
           </p>
         ) : null}
         {errors.root?.message ? (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger-700">
             {errors.root.message}
           </p>
         ) : null}

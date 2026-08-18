@@ -69,7 +69,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     const missing = isStatusError(task.error, 404);
     return (
       <div className="mx-auto max-w-md text-center">
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger-700">
           {missing
             ? "That task does not exist."
             : extractErrorMessage(task.error, "Could not load this task.")}
@@ -82,7 +82,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
           <button
             type="button"
             onClick={() => task.refetch()}
-            className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Try again
           </button>
@@ -138,7 +138,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         ) : null}
 
         {instance.isError && isForbiddenError(instance.error) ? (
-          <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p className="mt-2 rounded-md bg-warning-50 px-3 py-2 text-sm text-warning-800">
             You do not have access to this request&apos;s details. You can still record your decision
             below.
           </p>
@@ -146,13 +146,13 @@ export function TaskDetail({ taskId }: { taskId: string }) {
 
         {instance.isError && !isForbiddenError(instance.error) ? (
           <div className="mt-2">
-            <p role="alert" className="text-sm text-red-700">
+            <p role="alert" className="text-sm text-danger-700">
               {extractErrorMessage(instance.error, "Could not load the request behind this task.")}
             </p>
             <button
               type="button"
               onClick={() => instance.refetch()}
-              className="mt-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="mt-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Try again
             </button>
@@ -196,7 +196,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         <h2 className="text-lg font-semibold text-gray-900">Decision</h2>
 
         {notice ? (
-          <p role="status" className="mt-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
+          <p role="status" className="mt-2 rounded-md bg-success-50 px-3 py-2 text-sm text-success-800">
             {notice}
           </p>
         ) : null}
@@ -217,7 +217,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
             <button
               type="button"
               onClick={() => setDelegating(true)}
-              className="mt-4 inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="mt-4 inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               <UserRoundPlus aria-hidden="true" className="h-4 w-4" />
               Delegate my tasks
@@ -258,7 +258,7 @@ function RequestData({ data }: { data: Record<string, unknown> | null }) {
   }
 
   return (
-    <dl className="mt-4 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white text-sm">
+    <dl className="mt-4 divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white text-sm">
       {entries.map(([key, value]) => (
         <div key={key} className="grid gap-1 px-4 py-3 sm:grid-cols-3">
           <dt className="font-medium text-gray-700">{key}</dt>
@@ -298,7 +298,7 @@ function RequestValue({ value }: { value: unknown }) {
 function RecordedDecision({ task, mine }: { task: Task; mine: boolean }) {
   if (task.decision) {
     return (
-      <div className="mt-3 rounded-lg border border-gray-200 bg-white p-4 text-sm">
+      <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4 text-sm">
         <p className="font-medium text-gray-900">{DECISION_LABELS[task.decision]}</p>
         <p className="mt-2 whitespace-pre-wrap text-gray-700">
           {task.comment ?? "No comment was left."}

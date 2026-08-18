@@ -51,19 +51,19 @@ export function ReportsIndex() {
       ) : null}
 
       {workflows.isError ? (
-        <p role="alert" className="mt-6 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="mt-6 rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-700">
           {extractErrorMessage(workflows.error, "Could not load workflows.")}
         </p>
       ) : null}
 
       {workflows.isSuccess && rows.length === 0 ? (
-        <p className="mt-6 rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-600">
+        <p className="mt-6 rounded-xl border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-600">
           No workflows exist yet, so there is nothing to measure.
         </p>
       ) : null}
 
       {rows.length > 0 ? (
-        <ul className="mt-6 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+        <ul className="mt-6 divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white">
           {rows.map((workflow) => (
             <li key={workflow.id} className="flex items-center justify-between gap-3 px-4 py-3">
               <span className="text-sm font-medium text-gray-900">
@@ -74,7 +74,7 @@ export function ReportsIndex() {
               </span>
               <Link
                 href={`/reports/${workflow.id}`}
-                className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
               >
                 <BarChart3 aria-hidden="true" className="h-3.5 w-3.5" />
                 View report

@@ -52,7 +52,7 @@ function StateDetails({
   }
   return (
     <details className="text-xs">
-      <summary className="cursor-pointer text-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+      <summary className="cursor-pointer text-primary-700">
         {label}
       </summary>
       <pre className="mt-1 max-w-xs overflow-x-auto whitespace-pre-wrap break-all rounded bg-gray-50 p-2 text-[11px] text-gray-700">
@@ -139,7 +139,7 @@ export function AuditLogTable() {
           onClick={() => csvExport.mutate()}
           disabled={csvExport.isPending}
           aria-busy={csvExport.isPending}
-          className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Download aria-hidden="true" className="h-4 w-4" />
           {csvExport.isPending ? "Exporting…" : "Export CSV"}
@@ -209,18 +209,18 @@ export function AuditLogTable() {
       </div>
 
       {users.isError ? (
-        <p role="alert" className="mt-4 text-sm text-red-700">
+        <p role="alert" className="mt-4 text-sm text-danger-700">
           Could not load the user options, so that filter is unavailable and actors below are shown by
           id.
         </p>
       ) : null}
       {exportError ? (
-        <p role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p role="alert" className="mt-4 rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-700">
           {exportError}
         </p>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <caption className="sr-only">Audit log entries, newest first</caption>
           <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
@@ -260,13 +260,13 @@ export function AuditLogTable() {
             {entries.isError ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center">
-                  <p role="alert" className="text-sm text-red-700">
+                  <p role="alert" className="text-sm text-danger-700">
                     {extractErrorMessage(entries.error, "Could not load the audit trail.")}
                   </p>
                   <button
                     type="button"
                     onClick={() => entries.refetch()}
-                    className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Try again
                   </button>
@@ -325,7 +325,7 @@ export function AuditLogTable() {
             type="button"
             onClick={() => setPage((current) => Math.max(0, current - 1))}
             disabled={page === 0 || entries.isFetching}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Previous page
           </button>
@@ -334,7 +334,7 @@ export function AuditLogTable() {
             type="button"
             onClick={() => setPage((current) => current + 1)}
             disabled={!hasNextPage || entries.isFetching}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Next page
           </button>

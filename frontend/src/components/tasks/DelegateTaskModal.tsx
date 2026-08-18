@@ -151,12 +151,12 @@ export function DelegateTaskModal({
         />
 
         {error ? (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p role="alert" className="rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-700">
             {error}
           </p>
         ) : null}
         {notice ? (
-          <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
+          <p role="status" className="rounded-md bg-success-50 px-3 py-2 text-sm text-success-800">
             {notice}
           </p>
         ) : null}
@@ -168,7 +168,7 @@ export function DelegateTaskModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             {notice ? "Done" : "Cancel"}
           </button>
