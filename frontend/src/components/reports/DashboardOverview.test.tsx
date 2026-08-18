@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import DashboardOverview from "@/components/reports/DashboardOverview";
 import { AuthProvider } from "@/context/AuthContext";
@@ -6,6 +6,7 @@ import * as authApi from "@/lib/authApi";
 import * as reportsApi from "@/lib/reportsApi";
 import { setTokens } from "@/lib/tokenStorage";
 import type { AuditEvent, Dashboard, Task, User, WorkflowInstance } from "@/types";
+import { createTestQueryClient } from "@/test/renderWithQuery";
 
 jest.mock("@/lib/authApi");
 jest.mock("@/lib/reportsApi", () => ({
@@ -106,9 +107,7 @@ function renderDashboard() {
   });
   mockedAuthApi.fetchCurrentUser.mockResolvedValue(CALLER);
 
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  const queryClient = createTestQueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

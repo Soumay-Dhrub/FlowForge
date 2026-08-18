@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import AppShell from "@/components/layout/AppShell";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -7,6 +7,7 @@ import * as authApi from "@/lib/authApi";
 import * as notificationsApi from "@/lib/notificationsApi";
 import { setTokens } from "@/lib/tokenStorage";
 import type { RoleName, User } from "@/types";
+import { createTestQueryClient } from "@/test/renderWithQuery";
 
 const replace = jest.fn();
 
@@ -43,7 +44,7 @@ function userWithRole(roleName: RoleName): User {
 
 /** Exactly what the `(app)` route group's layout renders around a page. */
 function renderShell() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const queryClient = createTestQueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

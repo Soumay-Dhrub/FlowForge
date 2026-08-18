@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AxiosError, AxiosHeaders } from "axios";
@@ -7,6 +7,7 @@ import CreateUserModal from "@/components/users/CreateUserModal";
 import * as referenceDataApi from "@/lib/referenceDataApi";
 import * as usersApi from "@/lib/usersApi";
 import type { User } from "@/types";
+import { createTestQueryClient } from "@/test/renderWithQuery";
 
 jest.mock("@/lib/usersApi", () => ({
   ...jest.requireActual("@/lib/usersApi"),
@@ -52,9 +53,7 @@ function conflict(message: string): AxiosError {
 }
 
 function renderModal(onClose = jest.fn()) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  const queryClient = createTestQueryClient();
   const result = render(
     <QueryClientProvider client={queryClient}>
       <CreateUserModal open onClose={onClose} />
@@ -179,7 +178,7 @@ describe("CreateUserModal", () => {
       );
     }
 
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const queryClient = createTestQueryClient();
     render(
       <QueryClientProvider client={queryClient}>
         <Harness />

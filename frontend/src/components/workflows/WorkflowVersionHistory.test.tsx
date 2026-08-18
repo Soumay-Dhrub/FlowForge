@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WorkflowVersionHistory from "@/components/workflows/WorkflowVersionHistory";
@@ -7,6 +7,7 @@ import * as authApi from "@/lib/authApi";
 import { setTokens } from "@/lib/tokenStorage";
 import * as workflowsApi from "@/lib/workflowsApi";
 import type { RoleName, User, Workflow, WorkflowVersion } from "@/types";
+import { createTestQueryClient } from "@/test/renderWithQuery";
 
 jest.mock("@/lib/authApi");
 jest.mock("@/lib/workflowsApi", () => ({
@@ -85,9 +86,7 @@ function renderHistory(role: RoleName) {
   });
   mockedAuthApi.fetchCurrentUser.mockResolvedValue(userWithRole(role));
 
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  const queryClient = createTestQueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
