@@ -15,7 +15,7 @@ describe("SidebarNav", () => {
   it("shows every section to an ADMIN", () => {
     render(<SidebarNav role="ADMIN" />);
 
-    ["Dashboard", "Workflows", "Tasks", "Users", "Audit Logs"].forEach((label) => {
+    ["Dashboard", "Workflows", "Tasks", "Reports", "Users", "Audit Logs"].forEach((label) => {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     });
   });
@@ -28,6 +28,20 @@ describe("SidebarNav", () => {
     expect(screen.getByRole("link", { name: "Tasks" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Audit Logs" })).not.toBeInTheDocument();
+  });
+
+  // Analytics are ADMIN/MANAGER: an aggregate still describes how an organisation's reviewers
+  // perform, which is not something every employee should be able to pull.
+  it("offers Reports to a MANAGER", () => {
+    render(<SidebarNav role="MANAGER" />);
+
+    expect(screen.getByRole("link", { name: "Reports" })).toBeInTheDocument();
+  });
+
+  it("hides Reports from an EMPLOYEE", () => {
+    render(<SidebarNav role="EMPLOYEE" />);
+
+    expect(screen.queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
   });
 
   it("shows only the unrestricted sections when the role is not yet known", () => {

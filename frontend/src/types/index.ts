@@ -192,3 +192,96 @@ export interface WorkflowInstance {
   startedAt: string;
   completedAt: string | null;
 }
+
+/**
+ * Mirrors the backend `AuditEventResponse` — one entry of the dashboard activity feed
+ * (Requirement 20.3).
+ *
+ * Deliberately narrower than {@link AuditLogEntry}: the feed carries no before/after state, because
+ * those diffs can hold any field of any entity and reading them is an ADMIN-only affair.
+ *
+ * `actorId` is nullable. The audit table's FK is `ON DELETE SET NULL`, so an entry outlives the
+ * account that caused it — a deleted actor leaves a null rather than removing the record.
+ */
+export interface AuditEvent {
+  id: string;
+  actorId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  createdAt: string;
+}
+
+/**
+ * Mirrors the backend `DashboardResponse` from `GET /api/reports/dashboard`
+ * (Requirements 20.1, 20.2, 20.3).
+ *
+ * Every field is scoped to the calling user; the endpoint takes no user parameter at all.
+ * `submittedInstances` are list-shaped, so their `requestData` is always `null`.
+ */
+export interface Dashboard {
+  pendingTaskCount: number;
+  pendingTasks: Task[];
+  submittedInstances: WorkflowInstance[];
+  recentActivity: AuditEvent[];
+}
+
+/**
+ * Mirrors the backend `PerformanceFilter` echoed back inside a performance report, so a saved or
+ * exported report is self-describing.
+ *
+ * The instants are resolved from the calendar dates the caller sent: `submittedTo` is the *last*
+ * instant of the named day, not its midnight.
+ */
+export interface PerformanceFilters {
+  departmentId: string | null;
+  workflowId: string | null;
+  submittedFrom: string | null;
+  submittedTo: string | null;
+  minBottleneckSamples: number;
+}
+
+/**
+ * Mirrors the backend `NodePerformance` — how long one stage holds work (Requirements 21.1, 21.2).
+ *
+ * Only nodes with at least one *decided* task are reported, so `averageDwellSeconds` is populated
+ * here in practice; it stays nullable to match the wire type rather than to be coerced.
+ */
+export interface NodePerformance {
+  nodeId: string;
+  nodeType: NodeType;
+  nodeLabel: string | null;
+  decidedTaskCount: number;
+  averageDwellSeconds: number | null;
+  bottleneck: boolean;
+}
+
+/**
+ * Mirrors the backend `WorkflowPerformanceResponse` from
+ * `GET /api/reports/workflow/{id}/performance` (Requirements 21.1–21.4).
+ *
+ * `averageApprovalTimeSeconds` and `rejectionRate` are **`null` when nothing qualified**, and that
+ * null is load-bearing: an average over an empty set is undefined, so rendering it as `0` would
+ * claim instantaneous approvals and a spotless rejection record for data that does not exist. The
+ * counts stay at `0`, because zero is the true count.
+ *
+ * `bottleneckNode` is `null` when no node reached `bottleneckMinimumSamples` — a stage named on a
+ * single observation is an anecdote, not a constraint.
+ */
+export interface WorkflowPerformance {
+  workflowId: string;
+  workflowName: string;
+  filters: PerformanceFilters;
+  totalInstanceVolume: number;
+  runningInstanceCount: number;
+  completedInstanceCount: number;
+  rejectedInstanceCount: number;
+  cancelledInstanceCount: number;
+  erroredInstanceCount: number;
+  decidedInstanceCount: number;
+  averageApprovalTimeSeconds: number | null;
+  rejectionRate: number | null;
+  nodes: NodePerformance[];
+  bottleneckNode: NodePerformance | null;
+  bottleneckMinimumSamples: number;
+}

@@ -12,6 +12,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   ClipboardList,
   GitBranch,
   LayoutDashboard,
@@ -33,6 +34,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/workflows", label: "Workflows", icon: GitBranch },
   { href: "/tasks", label: "Tasks", icon: ClipboardList },
+  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["ADMIN", "MANAGER"] },
   { href: "/users", label: "Users", icon: Users, roles: ["ADMIN"] },
   { href: "/audit-logs", label: "Audit Logs", icon: ScrollText, roles: ["ADMIN"] },
 ];
