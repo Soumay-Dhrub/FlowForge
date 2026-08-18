@@ -31,16 +31,32 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Run backend tests
+      # Unit tests and the jqwik property tests. Surefire excludes the "integration" group, so this
+      # stays fast and needs no Docker.
+      - name: Run backend unit and property tests
         working-directory: ./backend
         run: mvn verify
+
+      # The integration tests are the ones that catch what unit tests structurally cannot: this project
+      # has already shipped a draft-save bug that every in-memory test passed, and an attachment upload
+      # that only failed against a real container. They were excluded from the command above, so
+      # without this step they had never run in CI at all.
+      #
+      # Testcontainers needs a Docker daemon, which ubuntu-latest provides. All the integration classes
+      # share one PostgreSQL container via IntegrationTestBase, so this costs one startup rather than one
+      # per class.
+      - name: Run backend integration tests
+        working-directory: ./backend
+        run: mvn verify -Pintegration -DfailIfNoTests=false
 
       - name: Upload backend test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-test-results
-          path: backend/target/surefire-reports/
+          path: |
+            backend/target/surefire-reports/
+            backend/target/failsafe-reports/
 
   frontend-test:
     name: Frontend Tests

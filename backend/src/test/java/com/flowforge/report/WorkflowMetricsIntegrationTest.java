@@ -33,18 +33,13 @@ import com.flowforge.workflow.dto.WorkflowEdgeRequest;
 import com.flowforge.workflow.dto.WorkflowNodeRequest;
 import com.flowforge.workflow.dto.WorkflowResponse;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -53,6 +48,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.flowforge.support.IntegrationTestBase;
 
 /**
  * Workflow performance metrics against a real PostgreSQL database (Requirements 21.1–21.5).
@@ -74,27 +70,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Validates: Requirements 21.1, 21.2, 21.3, 21.4, 21.5.
  */
-@Tag("integration")
-@SpringBootTest
-@Testcontainers
-class WorkflowMetricsIntegrationTest {
+class WorkflowMetricsIntegrationTest extends IntegrationTestBase {
 
     /** How long the slow stage is deliberately held, so the bottleneck is unambiguous. */
     private static final long SLOW_STAGE_MILLIS = 400;
-
-    @Container
-    @SuppressWarnings("resource")
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:15-alpine")
-            .withDatabaseName("flowforge_test")
-            .withUsername("flowforge")
-            .withPassword("flowforge");
-
-    @DynamicPropertySource
-    static void datasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
 
     @Autowired
     private ReportService reportService;
@@ -125,6 +104,10 @@ class WorkflowMetricsIntegrationTest {
 
     @Autowired
     private ApprovalRepository approvalRepository;
+
+    /** Used only to stage exact history: see {@link #decide}. */
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private UserRepository userRepository;
@@ -326,14 +309,25 @@ class WorkflowMetricsIntegrationTest {
     }
 
     /**
-     * Decide the open task an instance has at a node, optionally after holding it for a while so the
-     * node's dwell time is measurably different from another's.
+     * Decide the open task an instance has at a node, so that the node's measured dwell is exactly
+     * {@code dwellMillis}.
+     *
+     * <p>This used to sleep for the dwell it wanted and let the clock produce it. That made the fast
+     * stage's dwell whatever a database round trip happened to cost, which is normally a few
+     * milliseconds and occasionally — with the whole suite running in parallel against containers —
+     * more than the 400 ms the slow stage was held for. The bottleneck assertion then picked the wrong
+     * node and the build failed for reasons having nothing to do with the code under test.
+     *
+     * <p>So the decision is still made through the real service, producing a real {@code approvals}
+     * row, and afterwards the task's {@code created_at} is back-dated so
+     * {@code decided_at - created_at} is precisely the intended interval. The metric is computed from
+     * exactly those two columns, so it is now deterministic and the test no longer waits.
+     *
+     * <p>The update is raw SQL because {@code created_at} is mapped {@code updatable = false} under
+     * {@code @CreationTimestamp} — JPA will not write it, and it should not, outside a test that is
+     * deliberately staging history.
      */
-    private void decide(UUID instanceId, UUID nodeId, Decision decision, String comment, long holdMillis)
-            throws InterruptedException {
-        if (holdMillis > 0) {
-            Thread.sleep(holdMillis);
-        }
+    private void decide(UUID instanceId, UUID nodeId, Decision decision, String comment, long dwellMillis) {
         Task open = taskRepository.findByInstance_IdOrderByCreatedAtAsc(instanceId).stream()
                 .filter(task -> nodeId.equals(task.nodeId()))
                 .filter(task -> task.getStatus() == TaskStatus.PENDING)
@@ -342,6 +336,13 @@ class WorkflowMetricsIntegrationTest {
                         "Instance " + instanceId + " has no pending task at node " + nodeId));
 
         taskService.recordDecision(open.getId(), approverId, new TaskDecisionRequest(decision, comment));
+
+        Approval recorded = approvalRepository.findByTask_Id(open.getId())
+                .orElseThrow(() -> new AssertionError("No approval was written for task " + open.getId()));
+        jdbcTemplate.update(
+                "update tasks set created_at = ? where id = ?",
+                Timestamp.from(recorded.getDecidedAt().minusMillis(dwellMillis)),
+                open.getId());
     }
 
     /**

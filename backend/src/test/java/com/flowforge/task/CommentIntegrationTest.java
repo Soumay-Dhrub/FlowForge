@@ -18,16 +18,9 @@ import com.flowforge.workflow.WorkflowStatus;
 import com.flowforge.workflow.WorkflowVersion;
 import com.flowforge.workflow.WorkflowVersionRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -36,6 +29,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
+import com.flowforge.support.IntegrationTestBase;
 
 /**
  * Comments against a real PostgreSQL database (Requirements 15.1, 15.2, 15.3).
@@ -52,24 +46,7 @@ import static org.assertj.core.api.Assertions.tuple;
  *
  * <p>Validates: Requirements 15.1, 15.2, 15.3.
  */
-@Tag("integration")
-@SpringBootTest
-@Testcontainers
-class CommentIntegrationTest {
-
-    @Container
-    @SuppressWarnings("resource")
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:15-alpine")
-            .withDatabaseName("flowforge_test")
-            .withUsername("flowforge")
-            .withPassword("flowforge");
-
-    @DynamicPropertySource
-    static void datasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+class CommentIntegrationTest extends IntegrationTestBase {
 
     @Autowired
     private CommentService commentService;

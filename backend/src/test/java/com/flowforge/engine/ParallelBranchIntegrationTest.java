@@ -19,21 +19,15 @@ import com.flowforge.workflow.dto.WorkflowEdgeRequest;
 import com.flowforge.workflow.dto.WorkflowNodeRequest;
 import com.flowforge.workflow.dto.WorkflowResponse;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.flowforge.support.IntegrationTestBase;
 
 /**
  * Parallel branches and AND-Join synchronisation against a real PostgreSQL database.
@@ -50,24 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Validates: Requirements 10.1, 10.2, 10.3.
  */
-@Tag("integration")
-@SpringBootTest
-@Testcontainers
-class ParallelBranchIntegrationTest {
-
-    @Container
-    @SuppressWarnings("resource")
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:15-alpine")
-            .withDatabaseName("flowforge_test")
-            .withUsername("flowforge")
-            .withPassword("flowforge");
-
-    @DynamicPropertySource
-    static void datasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+class ParallelBranchIntegrationTest extends IntegrationTestBase {
 
     @Autowired
     private WorkflowEngineService engine;
