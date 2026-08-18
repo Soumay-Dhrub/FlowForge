@@ -285,3 +285,38 @@ export interface WorkflowPerformance {
   bottleneckNode: NodePerformance | null;
   bottleneckMinimumSamples: number;
 }
+
+/**
+ * Mirrors the backend `AuditLogResponse` from `GET /api/audit-logs` (Requirement 19.3). ADMIN only.
+ *
+ * The full entry, both states included — an audit search whose results omit what changed answers
+ * "something happened" and leaves the reader to open every row. `beforeState` is `null` for a create
+ * and `afterState` is `null` for a delete, and both are open maps: the diff carries whatever fields
+ * the audited entity has.
+ *
+ * `actorId` is nullable and that is not an anomaly: the FK is `ON DELETE SET NULL`, so the trail
+ * outlives the accounts it describes.
+ */
+export interface AuditLogEntry {
+  id: string;
+  actorId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  beforeState: Record<string, unknown> | null;
+  afterState: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+/**
+ * Mirrors the backend `AuditLogPage`.
+ *
+ * Note the field names: `entries` and `totalCount`, not Spring Data's `content`/`totalElements` —
+ * the endpoint returns its own record rather than a serialised `Page`.
+ */
+export interface AuditLogSearchPage {
+  entries: AuditLogEntry[];
+  totalCount: number;
+  page: number;
+  size: number;
+}
