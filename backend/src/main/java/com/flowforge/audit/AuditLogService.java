@@ -11,14 +11,25 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Write seam for the audit trail (Requirement 19.1).
+ * The write seam for the audit trail (Requirement 19.1).
  *
- * <p>Services call {@link #record} directly for now. Task 28 adds {@code AuditLogAspect}, which
- * will intercept service writes generically and funnel through this same method, plus the search
- * and CSV export endpoints. Keeping the seam here means later tasks change <em>who</em> calls
- * {@code record}, not <em>how</em> an entry is written.</p>
+ * <h2>Two ways in, on purpose</h2>
+ * <p>Services call {@link #record} explicitly at the point of change, and {@link AuditLogAspect}
+ * intercepts service writes generically. They are not redundant and they are not duplicates: the aspect
+ * <em>defers</em> to an explicit call made during the same invocation, because a method that recorded its
+ * own entry knows things the aspect cannot — which entity actually changed, what it looked like before,
+ * and whether the action is a {@code PUBLISH_VERSION} rather than an {@code UPDATE_WORKFLOWVERSION}. The
+ * aspect exists to cover the methods that record nothing, so that coverage does not depend on every
+ * future author remembering. {@link #explicitWrites()} is the counter that coordinates the two.
  *
- * <p>The service only ever appends. No update or delete operation is exposed (Requirement 19.2).</p>
+ * <h2>Append only</h2>
+ * <p>No update or delete operation is exposed here, {@link AuditLogRepository} declares none, and
+ * {@code V4__audit_logs_append_only.sql} enforces it in the database where nothing in Java can reach
+ * around it (Requirement 19.2).
+ *
+ * <p>Reading the trail lives in {@link AuditLogSearchService}, not here. Every producer in the system
+ * depends on this class to write one entry; widening it with search, paging and CSV export would make all
+ * of them depend on the query collaborator too, and every test double stub it.
  */
 @Service
 @RequiredArgsConstructor
@@ -74,7 +85,30 @@ public class AuditLogService {
     /** A delegation's window closed and routing returned to the delegator (Requirement 16.3). */
     public static final String ACTION_EXPIRE_DELEGATION = "EXPIRE_DELEGATION";
 
+    /**
+     * How many entries this thread has recorded explicitly.
+     *
+     * <p>A thread-local counter rather than a flag, so nesting works: the aspect takes a reading before
+     * the method runs and compares afterwards, which tells it whether an entry was written <em>during
+     * this invocation</em> regardless of how many were written before it or by another request in
+     * parallel. A boolean would be wrong the first time two service calls nested.
+     *
+     * <p>Never cleared. The value is a single {@code int} per thread that only ever grows, and clearing
+     * it would need a request boundary the audit trail should not have to know about. What matters is the
+     * difference between two readings, not the absolute value.
+     */
+    private static final ThreadLocal<int[]> EXPLICIT_WRITES = ThreadLocal.withInitial(() -> new int[1]);
+
     private final AuditLogRepository auditLogRepository;
+
+    /**
+     * The current thread's explicit-write reading, for {@link AuditLogAspect} to compare against.
+     *
+     * @return a monotonically increasing count of explicit {@code record} calls on this thread
+     */
+    static int explicitWrites() {
+        return EXPLICIT_WRITES.get()[0];
+    }
 
     /**
      * Append an audit entry, attributing it to the caller in the current security context.
@@ -118,6 +152,9 @@ public class AuditLogService {
                 .beforeState(beforeState)
                 .afterState(afterState)
                 .build());
+
+        // Counted so the aspect knows this invocation described itself and stands down.
+        EXPLICIT_WRITES.get()[0]++;
 
         log.debug("Audit entry {} recorded: actor={} entity={}:{}", action, actorId, entityType, entityId);
         return entry;
