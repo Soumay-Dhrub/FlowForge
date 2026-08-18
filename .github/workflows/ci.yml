@@ -117,23 +117,42 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Every build is tagged with the commit SHA, which is the only tag that identifies exactly what
+      # is running. `latest` is added on main as well, so a deployment can follow the branch, but a
+      # moving tag is never the only one an image has: given a running container you can always get
+      # back to the commit it was built from.
+      - name: Work out the image tags
+        id: tags
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "backend=flowforge-backend:${{ github.sha }},flowforge-backend:latest" >> "$GITHUB_OUTPUT"
+            echo "frontend=flowforge-frontend:${{ github.sha }},flowforge-frontend:latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "backend=flowforge-backend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "frontend=flowforge-frontend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build backend Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: false
-          tags: flowforge-backend:${{ github.sha }}
+          tags: ${{ steps.tags.outputs.backend }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # API_PROXY_TARGET is not passed here on purpose: the Dockerfile defaults it to
+      # http://backend:8080, the compose service name. It is a BUILD-time value -- Next freezes rewrite
+      # destinations into routes-manifest.json -- so deploying somewhere the backend has a different
+      # address means rebuilding with a different arg, not setting an environment variable.
       - name: Build frontend Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: false
-          tags: flowforge-frontend:${{ github.sha }}
+          tags: ${{ steps.tags.outputs.frontend }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
