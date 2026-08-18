@@ -320,3 +320,53 @@ export interface AuditLogSearchPage {
   page: number;
   size: number;
 }
+
+/**
+ * Mirrors the backend `AttachmentResponse` (Requirement 14.1).
+ *
+ * Metadata only. The bytes are never sent inline: a request's attachments can be tens of megabytes and
+ * a list view has no use for them.
+ */
+export interface Attachment {
+  id: string;
+  instanceId: string;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  uploadedById: string;
+  createdAt: string;
+}
+
+/**
+ * Mirrors the backend `CommentResponse` (Requirements 15.1, 15.2).
+ *
+ * `parentId` is null on a top-level comment and set on a reply. The list arrives flat in written order
+ * with each reply naming its parent, so nesting is the client's to render — see `toThread`.
+ */
+export interface Comment {
+  id: string;
+  instanceId: string;
+  authorId: string;
+  authorName: string | null;
+  body: string;
+  parentId: string | null;
+  createdAt: string;
+}
+
+/**
+ * Mirrors the backend `DelegationResponse` (Requirement 16.1).
+ *
+ * `active` is the stored flag; `inEffectNow` additionally accounts for the window, so a delegation
+ * saved for next week is active but not yet in effect. `reassignedTaskIds` names the pending tasks that
+ * changed hands when it was created.
+ */
+export interface Delegation {
+  id: string;
+  delegatorId: string;
+  delegateId: string;
+  startAt: string;
+  endAt: string;
+  active: boolean;
+  inEffectNow: boolean;
+  reassignedTaskIds: string[];
+}

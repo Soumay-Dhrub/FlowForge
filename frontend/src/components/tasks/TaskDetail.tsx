@@ -13,13 +13,15 @@
  * page: the decision form still works, because deciding is checked on task ownership, not on being
  * able to read the request.
  *
- * Attachments, the comment thread, and delegation are not here. The endpoints behind them do not exist
- * yet — they arrive with tasks 23, 24 and 25 — and a control that cannot work is worse than its absence.
+ * <p>Attachments and the discussion sit below the decision, and both are restricted to participants of
+ * the instance. They are rendered only when the instance itself loaded: a 403 there means the caller is
+ * not a participant, so those endpoints would refuse them too, and offering the controls anyway would
+ * invite an error instead of explaining one.
  */
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, UserRoundPlus } from "lucide-react";
 import { extractErrorMessage, isForbiddenError, isStatusError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { INSTANCE_STATUS_LABELS, fetchInstance, instanceKeys } from "@/lib/instancesApi";
@@ -32,11 +34,15 @@ import {
 } from "@/lib/tasksApi";
 import { useAuth } from "@/context/AuthContext";
 import TaskDecisionForm from "@/components/tasks/TaskDecisionForm";
+import DelegateTaskModal from "@/components/tasks/DelegateTaskModal";
+import AttachmentPanel from "@/components/instances/AttachmentPanel";
+import CommentThread from "@/components/instances/CommentThread";
 import type { Task } from "@/types";
 
 export function TaskDetail({ taskId }: { taskId: string }) {
   const { user } = useAuth();
   const [notice, setNotice] = useState<string | null>(null);
+  const [delegating, setDelegating] = useState(false);
 
   const task = useQuery({
     queryKey: taskKeys.detail(taskId),
@@ -205,11 +211,35 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                 )
               }
             />
+
+            {/* Delegation is offered only while the task is still the caller's to act on: handing over
+                work you have already decided, or that is not yours, is meaningless. */}
+            <button
+              type="button"
+              onClick={() => setDelegating(true)}
+              className="mt-4 inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <UserRoundPlus aria-hidden="true" className="h-4 w-4" />
+              Delegate my tasks
+            </button>
+            <DelegateTaskModal
+              taskId={detail.id}
+              open={delegating}
+              onClose={() => setDelegating(false)}
+            />
           </div>
         ) : (
           <RecordedDecision task={detail} mine={mine} />
         )}
       </section>
+
+      {/* Participant-only sections. A 403 on the instance means these would refuse the caller too. */}
+      {instance.isSuccess ? (
+        <>
+          <AttachmentPanel instanceId={detail.instanceId} />
+          <CommentThread instanceId={detail.instanceId} />
+        </>
+      ) : null}
     </div>
   );
 }
