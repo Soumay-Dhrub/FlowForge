@@ -22,7 +22,9 @@ import { extractErrorMessage, isForbiddenError, isStatusError } from "@/lib/api"
 import { fetchDepartments, fetchRoles, referenceDataKeys } from "@/lib/referenceDataApi";
 import { fetchUser, updateUser, userKeys } from "@/lib/usersApi";
 import { useAuth } from "@/context/AuthContext";
+import Badge from "@/components/ui/Badge";
 import NotAuthorized from "@/components/ui/NotAuthorized";
+import PageHeader from "@/components/ui/PageHeader";
 import SelectField from "@/components/ui/SelectField";
 import SubmitButton from "@/components/ui/SubmitButton";
 import TextField from "@/components/ui/TextField";
@@ -147,15 +149,27 @@ export function UserProfileForm({ userId }: { userId: string }) {
 
   return (
     <div className="mx-auto max-w-lg">
-      <Link href="/users" className="text-sm text-primary-700 hover:underline">
-        ← Users
-      </Link>
-      <h1 className="mt-2 text-2xl font-bold text-primary-700">{profile.data.name}</h1>
-      <p className="mt-1 text-sm text-gray-600">
-        {profile.data.email} · {profile.data.isActive ? "Active" : "Inactive"}
-      </p>
+      <PageHeader
+        breadcrumb={
+          <Link
+            href="/users"
+            className="rounded text-primary-700 hover:text-primary-800 hover:underline"
+          >
+            ← Users
+          </Link>
+        }
+        title={profile.data.name}
+        description={
+          <span className="flex flex-wrap items-center gap-2">
+            {profile.data.email}
+            <Badge tone={profile.data.isActive ? "success" : "neutral"}>
+              {profile.data.isActive ? "Active" : "Inactive"}
+            </Badge>
+          </span>
+        }
+      />
 
-      <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
+      <form onSubmit={onSubmit} noValidate className="space-y-4">
         <TextField
           id="profile-name"
           label="Name"

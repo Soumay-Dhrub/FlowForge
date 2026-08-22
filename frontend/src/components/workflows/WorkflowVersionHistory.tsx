@@ -35,8 +35,17 @@ import {
   workflowKeys,
 } from "@/lib/workflowsApi";
 import { useAuth } from "@/context/AuthContext";
+import Badge, { type BadgeTone } from "@/components/ui/Badge";
 import NotAuthorized from "@/components/ui/NotAuthorized";
-import type { WorkflowVersion } from "@/types";
+import PageHeader from "@/components/ui/PageHeader";
+import type { Workflow, WorkflowVersion } from "@/types";
+
+/** Same reading as the workflow table, so a definition does not change colour between screens. */
+const STATUS_TONES: Record<Workflow["status"], BadgeTone> = {
+  DRAFT: "neutral",
+  ACTIVE: "success",
+  ARCHIVED: "warning",
+};
 
 export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
   const { user } = useAuth();
@@ -133,38 +142,48 @@ export function WorkflowVersionHistory({ workflowId }: { workflowId: string }) {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <Link href="/workflows" className="text-sm text-primary-700 hover:underline">
-        ← Workflows
-      </Link>
+      <PageHeader
+        breadcrumb={
+          <Link
+            href="/workflows"
+            className="rounded text-primary-700 hover:text-primary-800 hover:underline"
+          >
+            ← Workflows
+          </Link>
+        }
+        title={definition.name}
+        description={definition.description ?? undefined}
+        actions={
+          /* The builder edits the newest unpublished version; it says so itself when there is none. */
+          <Link
+            href={`/workflows/${definition.id}/edit`}
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-3.5 text-sm font-medium text-white shadow-xs transition-colors hover:bg-primary-700 active:bg-primary-800"
+          >
+            <Pencil aria-hidden className="h-4 w-4" />
+            Open builder
+          </Link>
+        }
+      />
 
-      <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+      {/* The facts that do not change per version, kept out of the table that repeats per version. */}
+      <dl className="mb-6 flex flex-wrap gap-x-8 gap-y-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-xs">
         <div>
-          <h1 className="text-2xl font-bold text-primary-700">{definition.name}</h1>
-          {definition.description ? (
-            <p className="mt-1 text-sm text-gray-600">{definition.description}</p>
-          ) : null}
-        </div>
-        {/* The builder edits the newest unpublished version; it says so itself when there is none. */}
-        <Link
-          href={`/workflows/${definition.id}/edit`}
-          className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:ring-offset-2"
-        >
-          <Pencil aria-hidden="true" className="h-4 w-4" />
-          Open builder
-        </Link>
-      </div>
-      <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
-        <div>
-          <dt className="text-gray-500">Status</dt>
-          <dd className="font-medium text-gray-900">{WORKFLOW_STATUS_LABELS[definition.status]}</dd>
+          <dt className="text-xs uppercase tracking-wide text-gray-500">Status</dt>
+          <dd className="mt-1">
+            <Badge tone={STATUS_TONES[definition.status]}>
+              {WORKFLOW_STATUS_LABELS[definition.status]}
+            </Badge>
+          </dd>
         </div>
         <div>
-          <dt className="text-gray-500">Created by</dt>
-          <dd className="font-medium text-gray-900">{definition.createdByName ?? "—"}</dd>
+          <dt className="text-xs uppercase tracking-wide text-gray-500">Created by</dt>
+          <dd className="mt-1 font-medium text-gray-900">{definition.createdByName ?? "—"}</dd>
         </div>
         <div>
-          <dt className="text-gray-500">Created</dt>
-          <dd className="font-medium text-gray-900">{formatDateTime(definition.createdAt)}</dd>
+          <dt className="text-xs uppercase tracking-wide text-gray-500">Created</dt>
+          <dd className="mt-1 font-medium text-gray-900">
+            <time dateTime={definition.createdAt}>{formatDateTime(definition.createdAt)}</time>
+          </dd>
         </div>
       </dl>
 

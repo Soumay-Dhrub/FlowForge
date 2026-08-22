@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Loader2, Plus, Search } from "lucide-react";
+import { AlertCircle, Copy, Plus, Search, Workflow as WorkflowIcon } from "lucide-react";
 import { extractErrorMessage, isForbiddenError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import {
@@ -19,16 +19,31 @@ import {
   fetchWorkflows,
   workflowKeys,
 } from "@/lib/workflowsApi";
+import Badge, { type BadgeTone } from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
 import NotAuthorized from "@/components/ui/NotAuthorized";
+import PageHeader from "@/components/ui/PageHeader";
+import { SkeletonTableRows } from "@/components/ui/Skeleton";
 import CreateWorkflowModal from "@/components/workflows/CreateWorkflowModal";
 import type { Workflow } from "@/types";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
-const STATUS_STYLES: Record<Workflow["status"], string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  ACTIVE: "bg-green-100 text-success-800",
-  ARCHIVED: "bg-amber-100 text-warning-800",
+const COLUMNS = ["Name", "Status", "Created by", "Last updated", "Actions"] as const;
+
+/**
+ * How a definition's lifecycle reads.
+ *
+ * ARCHIVED is warning rather than neutral: an archived definition still has running instances behind it,
+ * so it is not simply gone and should not look it. DRAFT is neutral — unpublished is the normal state of
+ * something being written, not a problem.
+ */
+const STATUS_TONES: Record<Workflow["status"], BadgeTone> = {
+  DRAFT: "neutral",
+  ACTIVE: "success",
+  ARCHIVED: "warning",
 };
 
 export function WorkflowList() {
@@ -63,7 +78,8 @@ export function WorkflowList() {
   });
 
   const rows = useMemo(() => workflows.data ?? [], [workflows.data]);
-  const isFiltered = debouncedSearch.trim().length > 0;
+  const trimmedSearch = debouncedSearch.trim();
+  const isFiltered = trimmedSearch.length > 0;
 
   // Authoring is ADMIN/MANAGER only. An EMPLOYEE who reaches this URL is told so plainly rather
   // than shown a table that failed for reasons it does not explain.
@@ -74,160 +90,182 @@ export function WorkflowList() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-primary-700">Workflows</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Every workflow definition, newest first. Open one to see its version history.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:ring-offset-2"
-        >
-          <Plus aria-hidden="true" className="h-4 w-4" />
-          New workflow
-        </button>
-      </div>
-
-      <div className="mt-6 max-w-sm space-y-1">
-        <label htmlFor="workflow-search" className="block text-sm font-medium text-gray-700">
-          Search by name
-        </label>
-        <div className="relative">
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            id="workflow-search"
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="e.g. expense"
-            className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-gray-900 shadow-sm outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl">
+      <PageHeader
+        title="Workflows"
+        description="Every workflow definition, newest first. Open one to see its version history."
+        actions={
+          <Button variant="primary" icon={Plus} onClick={() => setCreateOpen(true)}>
+            New workflow
+          </Button>
+        }
+      />
 
       {notice ? (
-        <p role="status" className="mt-4 rounded-md bg-success-50 px-3 py-2 text-sm text-success-800">
+        <p
+          role="status"
+          className="mb-4 animate-scale-in rounded-xl border border-success-200 bg-success-50 px-3.5 py-2.5 text-sm text-success-800"
+        >
           {notice}
         </p>
       ) : null}
       {cloneError ? (
-        <p role="alert" className="mt-4 rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-700">
+        <p
+          role="alert"
+          className="mb-4 flex items-start gap-2 animate-scale-in rounded-xl border border-danger-200 bg-danger-50 px-3.5 py-2.5 text-sm text-danger-800"
+        >
+          <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-danger-600" />
           {cloneError}
         </p>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <caption className="sr-only">Workflows, newest first</caption>
-          <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-            <tr>
-              <th scope="col" className="px-4 py-3">
-                Name
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Status
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Created by
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Last updated
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {workflows.isPending ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-600">
-                  <span role="status" className="inline-flex items-center gap-2">
-                    <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-                    Loading workflows…
-                  </span>
-                </td>
-              </tr>
-            ) : null}
+      <Card padded={false} className="overflow-hidden">
+        {/*
+          Search lives in the table's own header rather than floating above the card, so it is visibly a
+          control over these rows and not a global one.
+        */}
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-200 bg-gray-50/70 px-4 py-3">
+          <div className="w-full max-w-xs space-y-1">
+            <label htmlFor="workflow-search" className="block text-xs font-medium text-gray-600">
+              Search by name
+            </label>
+            <div className="group relative">
+              <Search
+                aria-hidden
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-primary-600"
+              />
+              <input
+                id="workflow-search"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="e.g. expense"
+                className="h-9 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-900 shadow-xs transition-colors placeholder:text-gray-400 hover:border-gray-400"
+              />
+            </div>
+          </div>
+          {workflows.isSuccess && rows.length > 0 ? (
+            <p className="text-xs text-gray-500">
+              {rows.length} {rows.length === 1 ? "definition" : "definitions"}
+              {isFiltered ? " matching" : ""}
+            </p>
+          ) : null}
+        </div>
 
-            {workflows.isError ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <caption className="sr-only">Workflows, newest first</caption>
+            <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center">
-                  <p role="alert" className="text-sm text-danger-700">
-                    {extractErrorMessage(workflows.error, "Could not load workflows.")}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => workflows.refetch()}
-                    className="mt-3 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Try again
-                  </button>
-                </td>
+                {COLUMNS.map((column) => (
+                  <th key={column} scope="col" className="whitespace-nowrap px-4 py-3">
+                    {column}
+                  </th>
+                ))}
               </tr>
-            ) : null}
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {workflows.isPending ? (
+                <SkeletonTableRows rows={4} columns={COLUMNS.length} label="Loading workflows" />
+              ) : null}
 
-            {workflows.isSuccess && rows.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-600">
-                  {isFiltered
-                    ? `No workflows match “${debouncedSearch.trim()}”.`
-                    : "No workflows yet. Create one to get started."}
-                </td>
-              </tr>
-            ) : null}
+              {workflows.isError ? (
+                <tr>
+                  <td colSpan={COLUMNS.length} className="px-4 py-10 text-center">
+                    <p role="alert" className="text-sm text-danger-700">
+                      {extractErrorMessage(workflows.error, "Could not load workflows.")}
+                    </p>
+                    <Button className="mt-3" onClick={() => workflows.refetch()}>
+                      Try again
+                    </Button>
+                  </td>
+                </tr>
+              ) : null}
 
-            {rows.map((workflow) => (
-              <tr key={workflow.id} className="hover:bg-gray-50">
-                <th scope="row" className="px-4 py-3 text-left font-medium text-gray-900">
-                  <Link
-                    href={`/workflows/${workflow.id}`}
-                    className="text-primary-700 hover:underline"
-                  >
-                    {workflow.name}
-                  </Link>
-                  {workflow.description ? (
-                    <span className="block text-xs font-normal text-gray-500">
-                      {workflow.description}
-                    </span>
-                  ) : null}
-                </th>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[workflow.status]}`}
-                  >
-                    {WORKFLOW_STATUS_LABELS[workflow.status]}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-gray-700">{workflow.createdByName ?? "—"}</td>
-                <td className="px-4 py-3 text-gray-700">{formatDateTime(workflow.updatedAt)}</td>
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => clone.mutate(workflow)}
-                    disabled={clone.isPending}
-                    aria-busy={clone.isPending && clone.variables?.id === workflow.id}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Copy aria-hidden="true" className="h-3.5 w-3.5" />
-                    {clone.isPending && clone.variables?.id === workflow.id
-                      ? "Cloning…"
-                      : "Clone"}
-                    <span className="sr-only"> {workflow.name}</span>
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              {workflows.isSuccess && rows.length === 0 ? (
+                <tr>
+                  <td colSpan={COLUMNS.length}>
+                    {/*
+                      A search that matches nothing is not the same as having no workflows: the first is a
+                      dead end to back out of, the second is an invitation to create one.
+                    */}
+                    <EmptyState
+                      filtered={isFiltered}
+                      icon={isFiltered ? undefined : WorkflowIcon}
+                      title={
+                        isFiltered
+                          ? `No workflows match “${trimmedSearch}”.`
+                          : "No workflows yet. Create one to get started."
+                      }
+                      description={
+                        isFiltered
+                          ? "Names are matched loosely, so a shorter term will usually find more."
+                          : "A workflow describes the path a request takes and who has to approve it."
+                      }
+                      action={
+                        isFiltered ? (
+                          <Button onClick={() => setSearch("")}>Clear search</Button>
+                        ) : (
+                          <Button variant="primary" icon={Plus} onClick={() => setCreateOpen(true)}>
+                            Create the first workflow
+                          </Button>
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : null}
+
+              {rows.map((workflow) => {
+                const cloning = clone.isPending && clone.variables?.id === workflow.id;
+                return (
+                  <tr key={workflow.id} className="transition-colors hover:bg-gray-50/80">
+                    <th scope="row" className="px-4 py-3 text-left font-medium">
+                      <Link
+                        href={`/workflows/${workflow.id}`}
+                        className="rounded font-medium text-primary-700 hover:text-primary-800 hover:underline"
+                      >
+                        {workflow.name}
+                      </Link>
+                      {workflow.description ? (
+                        <span className="mt-0.5 block max-w-md truncate text-xs font-normal text-gray-500">
+                          {workflow.description}
+                        </span>
+                      ) : null}
+                    </th>
+                    <td className="px-4 py-3">
+                      <Badge tone={STATUS_TONES[workflow.status]}>
+                        {WORKFLOW_STATUS_LABELS[workflow.status]}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{workflow.createdByName ?? "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                      <time dateTime={workflow.updatedAt}>{formatDateTime(workflow.updatedAt)}</time>
+                    </td>
+                    <td className="px-4 py-3">
+                      {/*
+                        The workflow name is in the label but not on screen: "Clone" repeated down the
+                        column is unambiguous visually, because the row is right there, and ambiguous to a
+                        screen reader, because it is not.
+                      */}
+                      <Button
+                        size="sm"
+                        icon={Copy}
+                        loading={cloning}
+                        loadingLabel="Cloning…"
+                        onClick={() => clone.mutate(workflow)}
+                      >
+                        Clone
+                        <span className="sr-only"> {workflow.name}</span>
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       <CreateWorkflowModal
         open={createOpen}

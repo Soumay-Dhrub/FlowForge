@@ -33,6 +33,8 @@ import {
   taskKeys,
 } from "@/lib/tasksApi";
 import { useAuth } from "@/context/AuthContext";
+import Badge, { TASK_STATUS_TONES } from "@/components/ui/Badge";
+import PageHeader from "@/components/ui/PageHeader";
 import TaskDecisionForm from "@/components/tasks/TaskDecisionForm";
 import DelegateTaskModal from "@/components/tasks/DelegateTaskModal";
 import AttachmentPanel from "@/components/instances/AttachmentPanel";
@@ -97,33 +99,45 @@ export function TaskDetail({ taskId }: { taskId: string }) {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/tasks" className="text-sm text-primary-700 hover:underline">
-        ← Tasks
-      </Link>
+      <PageHeader
+        breadcrumb={
+          <Link
+            href="/tasks"
+            className="rounded text-primary-700 hover:text-primary-800 hover:underline"
+          >
+            ← Tasks
+          </Link>
+        }
+        title={detail.workflowName}
+        description={detail.nodeLabel ?? detail.nodeType}
+      />
 
-      <h1 className="mt-2 text-2xl font-bold text-primary-700">{detail.workflowName}</h1>
-      <p className="mt-1 text-sm text-gray-600">{detail.nodeLabel ?? detail.nodeType}</p>
-
-      <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+      <dl className="mb-8 flex flex-wrap gap-x-8 gap-y-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-xs">
         <div>
-          <dt className="text-gray-500">Status</dt>
-          <dd className="font-medium text-gray-900">{TASK_STATUS_LABELS[detail.status]}</dd>
+          <dt className="text-xs uppercase tracking-wide text-gray-500">Status</dt>
+          <dd className="mt-1">
+            <Badge tone={TASK_STATUS_TONES[detail.status] ?? "neutral"}>
+              {TASK_STATUS_LABELS[detail.status]}
+            </Badge>
+          </dd>
         </div>
         <div>
-          <dt className="text-gray-500">Step type</dt>
-          <dd className="font-medium text-gray-900">{detail.nodeType}</dd>
+          <dt className="text-xs uppercase tracking-wide text-gray-500">Step type</dt>
+          <dd className="mt-1 font-medium text-gray-900">{detail.nodeType}</dd>
         </div>
         <div>
-          <dt className="text-gray-500">Assigned to</dt>
-          <dd className="font-medium text-gray-900">{mine ? "You" : "Another user"}</dd>
+          <dt className="text-xs uppercase tracking-wide text-gray-500">Assigned to</dt>
+          <dd className="mt-1 font-medium text-gray-900">{mine ? "You" : "Another user"}</dd>
         </div>
         <div>
-          <dt className="text-gray-500">Due</dt>
-          <dd className="font-medium text-gray-900">{formatDateTime(detail.dueAt)}</dd>
+          <dt className="text-xs uppercase tracking-wide text-gray-500">Due</dt>
+          <dd className="mt-1 font-medium text-gray-900">{formatDateTime(detail.dueAt)}</dd>
         </div>
         <div>
-          <dt className="text-gray-500">Raised</dt>
-          <dd className="font-medium text-gray-900">{formatDateTime(detail.createdAt)}</dd>
+          <dt className="text-xs uppercase tracking-wide text-gray-500">Raised</dt>
+          <dd className="mt-1 font-medium text-gray-900">
+            <time dateTime={detail.createdAt}>{formatDateTime(detail.createdAt)}</time>
+          </dd>
         </div>
       </dl>
 

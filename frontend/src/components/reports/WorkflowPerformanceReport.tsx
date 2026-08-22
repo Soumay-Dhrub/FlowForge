@@ -30,7 +30,9 @@ import {
   type PerformanceFilterInput,
 } from "@/lib/reportsApi";
 import { useAuth } from "@/context/AuthContext";
+import Button from "@/components/ui/Button";
 import NotAuthorized from "@/components/ui/NotAuthorized";
+import PageHeader from "@/components/ui/PageHeader";
 import SelectField from "@/components/ui/SelectField";
 import TextField from "@/components/ui/TextField";
 import type { NodePerformance, WorkflowPerformance } from "@/types";
@@ -152,49 +154,47 @@ export function WorkflowPerformanceReport({ workflowId }: { workflowId: string }
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-primary-700">
-            {data ? data.workflowName : "Workflow performance"}
-          </h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Approval time, rejection rate, volume and the stage that holds work longest.
-          </p>
+      <PageHeader
+        breadcrumb={
           <Link
             href="/reports"
-            className="mt-1 inline-block text-sm text-primary-700 hover:underline"
+            className="rounded text-primary-700 hover:text-primary-800 hover:underline"
           >
-            All reports
+            ← All reports
           </Link>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => csvExport.mutate()}
-            disabled={csvExport.isPending}
-            aria-busy={csvExport.isPending}
-            className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Download aria-hidden="true" className="h-4 w-4" />
-            {csvExport.isPending ? "Exporting…" : "Export CSV"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (data) {
-                exportPerformanceJson(data);
-              }
-            }}
-            disabled={!data}
-            className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <FileJson aria-hidden="true" className="h-4 w-4" />
-            Export JSON
-          </button>
-        </div>
-      </div>
+        }
+        title={data ? data.workflowName : "Workflow performance"}
+        description="Approval time, rejection rate, volume and the stage that holds work longest."
+        actions={
+          <>
+            <Button
+              icon={Download}
+              loading={csvExport.isPending}
+              loadingLabel="Exporting…"
+              onClick={() => csvExport.mutate()}
+            >
+              Export CSV
+            </Button>
+            {/*
+              Disabled until the figures are in hand: exporting what has not loaded would write an empty
+              file, which looks like a report saying zero rather than one that never arrived.
+            */}
+            <Button
+              icon={FileJson}
+              disabled={!data}
+              onClick={() => {
+                if (data) {
+                  exportPerformanceJson(data);
+                }
+              }}
+            >
+              Export JSON
+            </Button>
+          </>
+        }
+      />
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SelectField
           id="report-filter-department"
           label="Department"

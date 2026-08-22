@@ -27,7 +27,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { applyEdgeChanges, applyNodeChanges, type Connection, type EdgeChange, type NodeChange } from "@xyflow/react";
-import { Loader2, Save, Upload } from "lucide-react";
+import { AlertCircle, Loader2, Save, Upload } from "lucide-react";
 import { extractErrorMessage, isForbiddenError, isStatusError } from "@/lib/api";
 import {
   WorkflowDraftError,
@@ -52,7 +52,9 @@ import {
   type BuilderNode,
 } from "@/lib/workflowGraph";
 import { useAuth } from "@/context/AuthContext";
+import Button from "@/components/ui/Button";
 import NotAuthorized from "@/components/ui/NotAuthorized";
+import PageHeader from "@/components/ui/PageHeader";
 import SelectField from "@/components/ui/SelectField";
 import BuilderCanvas from "@/components/workflows/BuilderCanvas";
 import EdgeConditionModal from "@/components/workflows/EdgeConditionModal";
@@ -387,62 +389,78 @@ export function WorkflowBuilder({ workflowId }: { workflowId: string }) {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <Link
-        href={`/workflows/${workflowId}`}
-        onClick={confirmLeave}
-        className="text-sm text-primary-700 hover:underline"
-      >
-        ← {definition.name}
-      </Link>
-
-      <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-primary-700">Workflow builder</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Editing draft version {draft.versionNumber}.{" "}
-            {dirty ? "Unsaved changes." : "All changes saved."}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => save.mutate()}
-            disabled={save.isPending}
-            aria-busy={save.isPending}
-            className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+      <PageHeader
+        breadcrumb={
+          <Link
+            href={`/workflows/${workflowId}`}
+            onClick={confirmLeave}
+            className="rounded text-primary-700 hover:text-primary-800 hover:underline"
           >
-            <Save aria-hidden="true" className="h-4 w-4" />
-            {save.isPending ? "Saving…" : "Save draft"}
-          </button>
-
-          {canPublish ? (
-            <button
-              type="button"
-              onClick={() => publish.mutate()}
-              disabled={publish.isPending || dirty}
-              aria-busy={publish.isPending}
-              title={dirty ? "Save the draft before publishing." : undefined}
-              className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            ← {definition.name}
+          </Link>
+        }
+        title="Workflow builder"
+        description={
+          <>
+            Editing draft version {draft.versionNumber}.{" "}
+            {/*
+              Save state is a coloured word rather than an icon: it is the one thing on this screen that a
+              person checks before they walk away from the machine, and it has to survive a glance.
+            */}
+            <span className={dirty ? "font-medium text-warning-700" : "text-success-700"}>
+              {dirty ? "Unsaved changes." : "All changes saved."}
+            </span>
+          </>
+        }
+        actions={
+          <>
+            <Button
+              icon={Save}
+              loading={save.isPending}
+              loadingLabel="Saving…"
+              onClick={() => save.mutate()}
             >
-              <Upload aria-hidden="true" className="h-4 w-4" />
-              {publish.isPending ? "Publishing…" : "Publish"}
-            </button>
-          ) : null}
-        </div>
-      </div>
+              Save draft
+            </Button>
+
+            {canPublish ? (
+              <Button
+                variant="primary"
+                icon={Upload}
+                loading={publish.isPending}
+                loadingLabel="Publishing…"
+                // Genuinely disabled rather than busy: publishing reads the stored draft, so with unsaved
+                // changes the button would publish something other than what is on screen.
+                disabled={dirty}
+                title={dirty ? "Save the draft before publishing." : undefined}
+                onClick={() => publish.mutate()}
+              >
+                Publish
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       {dirty ? (
-        <p className="mt-3 rounded-md bg-warning-50 px-3 py-2 text-sm text-warning-800">
+        <p className="mb-3 rounded-xl border border-warning-200 bg-warning-50 px-3.5 py-2.5 text-sm text-warning-800">
           Unsaved changes. Publishing uses the stored draft, so save before publishing.
         </p>
       ) : null}
       {notice ? (
-        <p role="status" className="mt-3 rounded-md bg-success-50 px-3 py-2 text-sm text-success-800">
+        <p
+          role="status"
+          className="mb-3 animate-scale-in rounded-xl border border-success-200 bg-success-50 px-3.5 py-2.5 text-sm text-success-800"
+        >
           {notice}
         </p>
       ) : null}
       {actionError ? (
-        <p role="alert" className="mt-3 rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-700">
+        <p
+          role="alert"
+          className="mb-3 flex items-start gap-2 animate-scale-in rounded-xl border border-danger-200 bg-danger-50 px-3.5 py-2.5 text-sm text-danger-800"
+        >
+          <AlertCircle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-danger-600" />
           {actionError}
         </p>
       ) : null}
