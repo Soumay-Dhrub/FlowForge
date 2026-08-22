@@ -1,14 +1,16 @@
 import { Workflow } from "lucide-react";
+import AuthShowcase from "@/components/auth/AuthShowcase";
 
 /**
- * The frame around the unauthenticated pages.
+ * The frame around the unauthenticated pages: an illustrated panel on the left, the form on the right.
  *
- * This is the first thing anyone sees, and it was a plain white box on a grey field. It now carries the
- * mark and a line of context, because a login screen with no indication of what it belongs to is
- * unsettling on an internal tool where people arrive from a link in an email.
+ * The split is a real division of labour rather than decoration. The left panel answers "what is this
+ * and why am I signing in" with a working pipeline diagram; the right panel does one job and is the only
+ * thing on screen below `lg`, where the form should own the viewport rather than sit under half a metre
+ * of artwork.
  *
- * The card is centred but sits slightly above the optical middle: a form pinned to the exact centre
- * reads as low, because the eye weights the space beneath it more heavily than the space above.
+ * The form column is what receives focus and what a screen reader encounters, because the panel is
+ * `aria-hidden` — a described diagram would be noise between the page title and the email field.
  */
 export function AuthCard({
   title,
@@ -23,35 +25,34 @@ export function AuthCard({
   footer?: React.ReactNode;
 }) {
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gray-50 px-4 py-12">
-      {/*
-        A single soft wash behind the card. Decorative only, hence aria-hidden: it gives the page some
-        depth without becoming a background image that fights the form for attention.
-      */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[42rem] -translate-x-1/2 rounded-full bg-primary-100/50 blur-3xl"
-      />
+    <main className="flex min-h-screen bg-white">
+      <AuthShowcase />
 
-      <div className="relative w-full max-w-sm">
-        <div className="mb-6 flex items-center justify-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 text-white shadow-sm">
-            <Workflow aria-hidden className="h-5 w-5" />
-          </span>
-          <span className="text-xl font-semibold tracking-tight text-gray-900">FlowForge</span>
+      <div className="relative flex flex-1 flex-col items-center justify-center px-4 py-12 sm:px-8">
+        {/* A faint wash, only where the illustrated panel is absent, so the narrow layout is not a bare
+            white field. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-32 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-primary-100/40 blur-3xl lg:hidden"
+        />
+
+        <div className="relative w-full max-w-sm">
+          {/* The mark repeats here because the left panel is gone below `lg`, and a login form with no
+              indication of what it belongs to is unsettling when people arrive from a link in an email. */}
+          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 text-white shadow-sm">
+              <Workflow aria-hidden className="h-5 w-5" />
+            </span>
+            <span className="text-xl font-semibold tracking-tight text-gray-900">FlowForge</span>
+          </div>
+
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{title}</h1>
+          {description ? <p className="mt-1.5 text-sm text-gray-500">{description}</p> : null}
+
+          <div className="mt-7">{children}</div>
+
+          {footer ? <div className="mt-6 text-sm text-gray-500">{footer}</div> : null}
         </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-md">
-          <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
-          {description ? <p className="mt-1 text-sm text-gray-500">{description}</p> : null}
-          <div className="mt-6">{children}</div>
-        </div>
-
-        {footer ? <div className="mt-4 text-center text-sm text-gray-500">{footer}</div> : null}
-
-        <p className="mt-8 text-center text-xs text-gray-400">
-          Workflow orchestration for internal approvals
-        </p>
       </div>
     </main>
   );

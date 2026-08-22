@@ -128,10 +128,32 @@ const config: Config = {
         shimmer: {
           "100%": { transform: "translateX(100%)" },
         },
+        /*
+         * A pulse travelling along an edge of the login page's pipeline diagram. Animating
+         * stroke-dashoffset moves a short dash along the path, which reads as flow; the opacity ramp at
+         * either end stops it appearing and vanishing abruptly at the node it is entering.
+         */
+        flow: {
+          "0%": { strokeDashoffset: "160", opacity: "0" },
+          "12%": { opacity: "1" },
+          "80%": { opacity: "1" },
+          "100%": { strokeDashoffset: "0", opacity: "0" },
+        },
+        /* A node lighting up as the pulse reaches it. */
+        "node-in": {
+          "0%": { opacity: "0.55", transform: "translateY(2px)" },
+          "50%": { opacity: "1", transform: "translateY(0)" },
+          "100%": { opacity: "0.85", transform: "translateY(0)" },
+        },
       },
       animation: {
         "fade-in": "fade-in 120ms ease-out",
         "scale-in": "scale-in 120ms ease-out",
+        // One shared 4.2s cycle for the diagram, so the pulses and the node highlights stay in step
+        // however long the page is open. Slow on purpose: this sits behind a password field, and
+        // anything quicker competes with the form for attention.
+        flow: "flow 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite",
+        "node-in": "node-in 4.2s ease-in-out infinite",
       },
     },
   },
