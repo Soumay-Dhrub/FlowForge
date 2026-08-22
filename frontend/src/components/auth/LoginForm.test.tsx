@@ -68,9 +68,9 @@ describe("LoginForm", () => {
 
     renderLoginForm();
 
-    await userEvent.type(screen.getByLabelText("Email"), "admin@flowforge.local");
+    await userEvent.type(screen.getByLabelText("Email address"), "admin@flowforge.local");
     await userEvent.type(screen.getByLabelText("Password"), "Admin@12345");
-    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await userEvent.click(screen.getByRole("button", { name: /Sign in to FlowForge/i }));
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard"));
     expect(mockedAuthApi.login).toHaveBeenCalledWith("admin@flowforge.local", "Admin@12345");
@@ -81,13 +81,13 @@ describe("LoginForm", () => {
   it("shows validation errors and does not call the API when fields are empty", async () => {
     renderLoginForm();
 
-    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await userEvent.click(screen.getByRole("button", { name: /Sign in to FlowForge/i }));
 
     expect(await screen.findByText("Email is required")).toBeInTheDocument();
     expect(await screen.findByText("Password is required")).toBeInTheDocument();
     expect(mockedAuthApi.login).not.toHaveBeenCalled();
     expect(replace).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Email")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Email address")).toHaveAttribute("aria-invalid", "true");
   });
 
   it("surfaces the generic backend message on a 401 and stays on the page", async () => {
@@ -95,9 +95,9 @@ describe("LoginForm", () => {
 
     renderLoginForm();
 
-    await userEvent.type(screen.getByLabelText("Email"), "admin@flowforge.local");
+    await userEvent.type(screen.getByLabelText("Email address"), "admin@flowforge.local");
     await userEvent.type(screen.getByLabelText("Password"), "wrong-password");
-    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await userEvent.click(screen.getByRole("button", { name: /Sign in to FlowForge/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Invalid email or password");
     expect(replace).not.toHaveBeenCalled();
