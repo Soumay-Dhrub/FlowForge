@@ -52,6 +52,21 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /*
+   * Chrome paints its own pale-yellow background on autofilled inputs, which overrides the field's
+   * own background and makes a filled login form look broken next to an empty one. There is no
+   * property to switch it off, so the accepted workaround is an inset shadow large enough to cover
+   * the field, plus a long transition delay so the shadow is never repainted back.
+   */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: theme("colors.gray.900");
+    -webkit-box-shadow: 0 0 0 40rem theme("colors.white") inset;
+    caret-color: theme("colors.gray.900");
+    transition: background-color 100000s ease-in-out 0s;
+  }
+
   /* Respect a stated preference for less motion: transitions become instant rather than merely fast. */
   @media (prefers-reduced-motion: reduce) {
     *,

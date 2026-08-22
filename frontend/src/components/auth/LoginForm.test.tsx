@@ -70,7 +70,7 @@ describe("LoginForm", () => {
 
     await userEvent.type(screen.getByLabelText("Email address"), "admin@flowforge.local");
     await userEvent.type(screen.getByLabelText("Password"), "Admin@12345");
-    await userEvent.click(screen.getByRole("button", { name: /Sign in to FlowForge/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Sign in/i }));
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard"));
     expect(mockedAuthApi.login).toHaveBeenCalledWith("admin@flowforge.local", "Admin@12345");
@@ -81,7 +81,7 @@ describe("LoginForm", () => {
   it("shows validation errors and does not call the API when fields are empty", async () => {
     renderLoginForm();
 
-    await userEvent.click(screen.getByRole("button", { name: /Sign in to FlowForge/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Sign in/i }));
 
     expect(await screen.findByText("Email is required")).toBeInTheDocument();
     expect(await screen.findByText("Password is required")).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe("LoginForm", () => {
 
     await userEvent.type(screen.getByLabelText("Email address"), "admin@flowforge.local");
     await userEvent.type(screen.getByLabelText("Password"), "wrong-password");
-    await userEvent.click(screen.getByRole("button", { name: /Sign in to FlowForge/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Sign in/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Invalid email or password");
     expect(replace).not.toHaveBeenCalled();
