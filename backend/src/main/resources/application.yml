@@ -42,6 +42,17 @@ spring:
     password: ${MAIL_PASSWORD:}
 
 app:
+  bootstrap:
+    admin:
+      # Creates the first administrator when the users table is empty, so a fresh install can be
+      # signed into. Every account-creating route needs an existing ADMIN and there is no public
+      # registration, so without this a clean database has no way in. Runs only while no users
+      # exist, and never modifies an installation that has any. See AdminBootstrap.
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+      email: ${BOOTSTRAP_ADMIN_EMAIL:admin@flowforge.local}
+      # Left empty on purpose: a committed default would be a known credential in every
+      # deployment. When empty a strong random password is generated and logged once at startup.
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:}
   jwt:
     secret: ${JWT_SECRET:change-me-in-production-must-be-at-least-256-bits}
     # access token: 15 minutes

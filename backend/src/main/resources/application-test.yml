@@ -9,6 +9,12 @@ spring:
     port: 1025
 
 app:
+  bootstrap:
+    admin:
+      # Off for tests. Integration tests start against an empty schema, which is exactly the
+      # condition that triggers the bootstrap, so leaving it on would insert an administrator into
+      # every fixture and break anything asserting on user counts or listings.
+      enabled: false
   jwt:
     secret: test-secret-key-for-unit-tests-only-256bits-long!!
     access-token-expiry-ms: 900000

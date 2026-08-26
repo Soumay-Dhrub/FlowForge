@@ -32,11 +32,32 @@ public class JwtTokenProvider {
     private final long accessTokenExpiryMs;
     private final long refreshTokenExpiryMs;
 
+    /**
+     * Prefix shared by every placeholder secret shipped in the repository — {@code application.yml},
+     * {@code docker-compose.yml} and {@code .env.example} each carry a different
+     * {@code change-me-in-production-...} string. Matching the prefix catches all of them.
+     */
+    private static final String PLACEHOLDER_SECRET_PREFIX = "change-me";
+
     public JwtTokenProvider(
             @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.access-token-expiry-ms}") long accessTokenExpiryMs,
             @Value("${app.jwt.refresh-token-expiry-ms}") long refreshTokenExpiryMs
     ) {
+        // Keys.hmacShaKeyFor already rejects anything shorter than 256 bits, so a too-short secret
+        // fails fast at startup. It cannot judge whether a long secret is *public*, though, and the
+        // committed default satisfies the length rule — so a deployment that never sets JWT_SECRET
+        // starts up happily and signs tokens with a key published in this repository. Anyone could
+        // then mint a valid admin token. Warn loudly rather than refuse to start: the same default
+        // is what makes `docker compose up` work with no configuration, and breaking that would
+        // trade a documented warning for a setup barrier.
+        if (secret.startsWith(PLACEHOLDER_SECRET_PREFIX)) {
+            log.warn("""
+                    SECURITY: app.jwt.secret is still the placeholder shipped with the repository. \
+                    Tokens are being signed with a publicly known key, so anyone can forge one. \
+                    Set the JWT_SECRET environment variable to a private random value of at least \
+                    32 characters before exposing this instance to anyone.""");
+        }
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpiryMs = accessTokenExpiryMs;
         this.refreshTokenExpiryMs = refreshTokenExpiryMs;

@@ -1,0 +1,45 @@
+# Line-ending normalisation.
+#
+# Without this, a clone on Windows with core.autocrlf=true gets CRLF in every text file. That is
+# not only cosmetic: a shell script checked out with CRLF and then copied into a Linux container
+# fails to run at all ("bad interpreter: no such file or directory"), and CRLF in a Dockerfile
+# ENTRYPOINT or an SQL migration produces equally confusing failures. Every tracked text file is
+# currently LF, so adding this changes nothing today and keeps it that way.
+
+# Normalise to LF in the repository, check out native on Windows for ordinary text.
+* text=auto
+
+# Files that must be LF in the working tree too, because they are executed by Linux tooling
+# (containers, CI) regardless of the developer's operating system.
+*.sh            text eol=lf
+*.bash          text eol=lf
+Dockerfile      text eol=lf
+*.Dockerfile    text eol=lf
+.dockerignore   text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.sql           text eol=lf
+
+# Windows-only scripts keep CRLF.
+*.ps1           text eol=crlf
+*.cmd           text eol=crlf
+*.bat           text eol=crlf
+
+# Generated lockfiles: keep them diffable but never let a merge tool reformat them.
+pnpm-lock.yaml  text eol=lf -diff
+package-lock.json text eol=lf -diff
+
+# Binary assets — never touch these.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.svgz   binary
+*.pdf    binary
+*.jar    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.eot    binary

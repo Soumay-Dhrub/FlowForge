@@ -1,5 +1,6 @@
 package com.flowforge.user.dto;
 
+import com.flowforge.common.validation.BcryptPasswordLimit;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -22,6 +23,9 @@ public record CreateUserRequest(
 
         @NotBlank(message = "Password is required")
         @Size(min = 8, message = "Password must be at least 8 characters")
+        // BCrypt reads only the first 72 bytes, so without this an over-long password is
+        // silently shortened to one the user never chose. See BcryptPasswordLimit.
+        @BcryptPasswordLimit
         String password,
 
         @NotNull(message = "Role ID is required")

@@ -9,7 +9,7 @@ FlowForge is a configurable workflow orchestration platform that lets teams desi
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 14, TypeScript, Tailwind CSS, React Flow (`@xyflow/react`), React Query |
-| Backend | Spring Boot 3.5 (Java 25), Spring Security (JWT), Spring Data JPA, MapStruct, Lombok |
+| Backend | Spring Boot 3.2 (Java 21), Spring Security (JWT), Spring Data JPA, MapStruct, Lombok |
 | Database | PostgreSQL 15, Flyway migrations |
 | Build | Maven 3.9+ (backend), pnpm (frontend) |
 | Containerization | Docker, docker-compose |
@@ -19,10 +19,30 @@ FlowForge is a configurable workflow orchestration platform that lets teams desi
 
 ## Prerequisites
 
-- **Java 25** (e.g. via SDKMAN: `sdk install java 25-tem`)
+The fastest path needs only Docker: `docker compose up --build` builds both applications inside
+containers, so no local JDK, Maven or Node install is required. The rest matter only if you want to
+run a part of the stack directly.
+
+- **Docker Desktop** (includes Docker Compose v2) — sufficient on its own
+- **Java 21 or newer** (e.g. `sdk install java 21-tem`) — for building the backend locally
 - **Maven 3.9+** (`mvn --version`)
-- **Docker Desktop** (includes Docker Compose v2)
-- **Node.js 20+** and **pnpm** (`npm install -g pnpm`)
+- **Node.js 20 or newer** — for running the frontend dev server
+- **pnpm** — no separate install needed; `corepack pnpm ...` uses the exact version pinned in
+  `frontend/package.json`. `npm install -g pnpm` also works.
+
+### A note on the JDK version
+
+The backend compiles to Java 21 bytecode (`<release>21</release>`) but **builds and tests on any JDK
+from 21 upward**, so you do not need to match a specific version or configure anything.
+
+If you want the build to run on a real JDK 21 for exact parity with CI and the runtime image, opt in:
+
+```bash
+mvn -Pjdk21-toolchain verify
+```
+
+That profile requires a `~/.m2/toolchains.xml` entry pointing at a JDK 21 (the profile comment in
+`backend/pom.xml` shows the snippet). It is opt-in precisely so that a fresh clone never needs it.
 
 ---
 
@@ -40,21 +60,48 @@ FlowForge is a configurable workflow orchestration platform that lets teams desi
    # Edit .env with your secrets (see Environment Variables below)
    ```
 
+   Copying is optional — every value has a working default, so `docker compose up` runs without a
+   `.env` at all. Copy it when you need to change a port or set a real `JWT_SECRET`.
+
 3. **Start all services**
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
 
    This starts:
    - `postgres` — PostgreSQL 15 on port `5432`
    - `backend` — Spring Boot API on port `8080`
    - `frontend` — Next.js app on port `3000`
-   - `pgadmin` — pgAdmin UI on port `5050` (local dev only)
 
-4. **Access the app**
+   `pgadmin` (`5050`) and `mailhog` (`8025`) are gated behind the `dev` profile. Add them with
+   `docker compose --profile dev up`, or set `COMPOSE_PROFILES=dev` in `.env`.
+
+4. **Get the first sign-in credentials**
+
+   A clean database has the three roles and a `General` department but **no users**, and there is no
+   public registration endpoint — creating a user requires an existing `ADMIN`. So on first start the
+   backend creates one administrator and prints a generated password once:
+
+   ```bash
+   docker compose logs backend | grep -A6 "first administrator"
+   ```
+
+   ```
+   FlowForge had no users, so a first administrator was created.
+     email:    admin@flowforge.local
+     password: 3yc5wI24UdhFSRPnAYVAJEvyY1kIR-iH
+   ```
+
+   To choose the password yourself instead, set `BOOTSTRAP_ADMIN_PASSWORD` in `.env` before the first
+   start. The password is generated rather than defaulted on purpose: a fixed default committed here
+   would be a known credential on every deployment. This only ever runs while the `users` table is
+   empty, so it can never alter an existing installation.
+
+5. **Access the app**
    - Frontend: http://localhost:3000
    - API: http://localhost:8080/api
-   - pgAdmin: http://localhost:5050
+   - pgAdmin: http://localhost:5050 (`--profile dev`)
+   - MailHog (captures all outgoing mail): http://localhost:8025 (`--profile dev`)
 
 ---
 
@@ -62,19 +109,42 @@ FlowForge is a configurable workflow orchestration platform that lets teams desi
 
 ### Backend
 
+Start a Postgres instance first — the compose file can provide just that one:
+
 ```bash
-# Start a local Postgres instance first, then:
+docker compose up -d postgres
+```
+
+Then run the backend against it. These are environment variables, not Spring arguments, so pass them
+as such:
+
+```bash
 cd backend
-mvn spring-boot:run -Dspring-boot.run.arguments="--DB_URL=jdbc:postgresql://localhost:5432/flowforge --DB_USERNAME=flowforge --DB_PASSWORD=flowforge"
+DB_URL=jdbc:postgresql://localhost:5432/flowforge \
+DB_USERNAME=flowforge \
+DB_PASSWORD=flowforge \
+mvn spring-boot:run
+```
+
+On Windows PowerShell:
+
+```powershell
+cd backend
+$env:DB_URL="jdbc:postgresql://localhost:5432/flowforge"
+$env:DB_USERNAME="flowforge"; $env:DB_PASSWORD="flowforge"
+mvn spring-boot:run
 ```
 
 ### Frontend
 
 ```bash
 cd frontend
-pnpm install
-pnpm dev
+corepack pnpm install     # or: pnpm install
+corepack pnpm dev         # or: pnpm dev
 ```
+
+The dev server proxies `/api/*` to `http://localhost:8080`, so the browser stays on one origin and no
+CORS configuration is needed. Override the target with `API_PROXY_TARGET` in `.env.local`.
 
 ---
 
@@ -87,19 +157,69 @@ cd backend
 mvn verify
 ```
 
+Runs 383 unit and jqwik property tests. Surefire excludes the `integration` group, so this needs no
+Docker.
+
 ### Backend integration tests (requires Docker)
 
 ```bash
 cd backend
-mvn verify -P integration
+mvn verify -Pintegration
 ```
+
+Runs 30 tests against a real PostgreSQL 15 container via Testcontainers, sharing one container across
+all classes.
 
 ### Frontend tests
 
 ```bash
 cd frontend
-pnpm test --ci
+corepack pnpm run test:ci     # 19 suites, 120 tests
+corepack pnpm run lint
+corepack pnpm exec tsc --noEmit    # type check (no dedicated script)
 ```
+
+---
+
+## Troubleshooting
+
+**`Bind for 0.0.0.0:5432 failed: port is already allocated`**
+A local Postgres (or another project) holds the port. Only the host side needs to change:
+
+```bash
+POSTGRES_PORT=5433 docker compose up -d
+```
+
+`BACKEND_PORT` and `FRONTEND_PORT` work the same way. Nothing inside the compose network is affected,
+so the frontend still reaches the backend.
+
+**Cannot sign in on a fresh install**
+The database starts with no users. Get the generated administrator password from the log:
+
+```bash
+docker compose logs backend | grep -A6 "first administrator"
+```
+
+If that line is absent, the `users` table is not empty — the bootstrap only runs on a genuinely empty
+database. `docker compose down -v` discards the volume and starts over (this deletes all data).
+
+**Editor shows hundreds of errors in the backend but `mvn verify` passes**
+The language server is not running Lombok's annotation processor. 77 files rely on Lombok, so without
+it every generated constructor, getter and `log` field looks missing. Install a Lombok plugin
+(IntelliJ has one built in; VS Code needs the Lombok extension), then reload. This never affects the
+real build.
+
+**`Cannot find matching toolchain definitions for jdk [version='21']`**
+You passed `-Pjdk21-toolchain` without a `~/.m2/toolchains.xml`. Either add the entry shown in
+`backend/pom.xml`, or just drop the flag — the default build works on any JDK 21+.
+
+**`Attachment storage is not writable`**
+A host bind mount at the attachment path must be writable by uid 101, the non-root `spring` user the
+image runs as. The named volume in `docker-compose.yml` avoids this.
+
+**Emails never arrive**
+Nothing is sent to real inboxes by default; `MAIL_HOST` points at MailHog. Start it with
+`docker compose --profile dev up -d mailhog` and read the captured mail at http://localhost:8025.
 
 ---
 
@@ -119,7 +239,29 @@ Copy `.env.example` to `.env` and fill in values before running.
 | `MAIL_PORT` | `1025` | SMTP port |
 | `MAIL_USERNAME` | *(empty)* | SMTP auth username |
 | `MAIL_PASSWORD` | *(empty)* | SMTP auth password |
-| `ATTACHMENT_MAX_SIZE` | `10485760` | Max upload size in bytes (10 MB) |
+| `MAIL_FROM` | `no-reply@flowforge.local` | Envelope sender on outgoing mail |
+| `ATTACHMENT_MAX_SIZE` | `10485760` | Per-file limit in bytes (10 MiB), enforced by the application |
+| `ATTACHMENT_MAX_UPLOAD_SIZE` | `11MB` | Servlet limit. Deliberately above `ATTACHMENT_MAX_SIZE` so oversized files get a descriptive 413 instead of a truncated stream |
+| `ATTACHMENT_MAX_REQUEST_SIZE` | `12MB` | Servlet limit for the whole multipart request |
+| `ATTACHMENT_STORAGE_PATH` | `./var/attachments` | Root for attachment bytes; needs a volume in production |
+| `BOOTSTRAP_ADMIN_ENABLED` | `true` | Create a first administrator when no users exist |
+| `BOOTSTRAP_ADMIN_EMAIL` | `admin@flowforge.local` | Address of that account |
+| `BOOTSTRAP_ADMIN_PASSWORD` | *(empty)* | Empty generates one and logs it once |
+| `WEB_BASE_URL` | `http://localhost:3000` | Base URL used in notification email links |
+| `PASSWORD_RESET_URL` | `http://localhost:3000/reset-password` | Page that collects the new password |
+| `PASSWORD_RESET_EXPIRY_MS` | `86400000` | Reset token TTL, clamped to 24h |
+
+Frontend variables live in `frontend/.env.local.example`. Next.js inlines `NEXT_PUBLIC_*` values at
+build time, so they cannot be supplied to a running container.
+
+Generate a real `JWT_SECRET` with:
+
+```bash
+openssl rand -base64 48
+```
+
+The backend refuses to start on a secret shorter than 256 bits, and logs a `SECURITY` warning for as
+long as the committed placeholder is still in use.
 
 ---
 
@@ -127,7 +269,7 @@ Copy `.env.example` to `.env` and fill in values before running.
 
 ```
 FlowForge/
-├── backend/                        Spring Boot API (Java 25 / Maven)
+├── backend/                        Spring Boot API (Java 21 / Maven)
 │   ├── src/main/java/com/flowforge/
 │   │   ├── FlowForgeApplication.java
 │   │   ├── auth/                   JWT auth, password reset
@@ -138,7 +280,7 @@ FlowForge/
 │   │   ├── notification/           In-app + email notifications
 │   │   ├── audit/                  AOP-based audit logging
 │   │   ├── report/                 Dashboard + analytics
-│   │   └── common/                 Shared exceptions, response wrapper
+│   │   └── common/                 Shared exceptions, response wrapper, validation constraints
 │   ├── src/main/resources/
 │   │   ├── application.yml
 │   │   ├── application-test.yml
@@ -221,17 +363,22 @@ startup rather than silently altering a table.
 
 ```bash
 docker compose up -d postgres     # wait for healthy
-docker compose up -d backend      # applies V1, V2, V3 on an empty database
+docker compose up -d backend      # applies V1..V4 on an empty database
 docker compose logs backend | grep -i flyway
 ```
 
-Nothing seeds an initial administrator. `V2` seeds the three roles and a default department, so the
-first user has to be inserted directly with a bcrypt hash, after which they can create everyone else
-through `POST /api/users`.
+`V2` seeds the three roles and a default department. The first administrator is created by the
+application, not by a migration, so no password hash is committed to the repository — see
+`AdminBootstrap`. It runs only while the `users` table is empty:
 
-```bash
-htpasswd -bnBC 12 "" 'YourPassword' | tr -d ':\n' | sed 's/^\$2y\$/$2a$/'
-```
+| Variable | Default | Behaviour |
+|---|---|---|
+| `BOOTSTRAP_ADMIN_ENABLED` | `true` | Set `false` where accounts are provisioned another way. |
+| `BOOTSTRAP_ADMIN_EMAIL` | `admin@flowforge.local` | Address of the created account. |
+| `BOOTSTRAP_ADMIN_PASSWORD` | *(empty)* | Empty generates a strong random password and logs it once. Set it to choose your own. |
+
+That administrator can then create everyone else through `POST /api/users`. Deleting the last user
+re-enables the bootstrap on next start, which is the intended recovery path for a lost admin account.
 
 ### Health checks
 

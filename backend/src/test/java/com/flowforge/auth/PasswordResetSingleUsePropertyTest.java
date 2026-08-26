@@ -7,6 +7,7 @@ import com.flowforge.notification.EmailSender;
 import com.flowforge.user.Role;
 import com.flowforge.user.User;
 import com.flowforge.user.UserRepository;
+import com.flowforge.support.PasswordArbitraries;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
 import net.jqwik.api.Combinators;
@@ -92,11 +93,11 @@ class PasswordResetSingleUsePropertyTest {
                         Arbitraries.strings().alpha().numeric().ofMinLength(1).ofMaxLength(20),
                         Arbitraries.of("example.com", "flowforge.io", "corp.test"))
                 .as((localPart, domain) -> localPart.toLowerCase() + "@" + domain);
-        // The reset endpoint enforces a minimum length of 8 in its request DTO, so the generated
-        // passwords stay inside the accepted input space. Distinctness matters: the assertions
+        // The reset DTO requires at least 8 characters and caps input at BCrypt's 72 bytes, so the
+        // generated passwords stay inside the accepted input space — the byte bound matters because
+        // 48 characters of arbitrary Unicode can exceed it. Distinctness matters too: the assertions
         // distinguish "first new password" from "replay password".
-        Arbitrary<String> passwords = Arbitraries.strings().ofMinLength(8).ofMaxLength(48)
-                .filter(pw -> !pw.isBlank());
+        Arbitrary<String> passwords = PasswordArbitraries.valid(48);
 
         return Combinators.combine(emails, passwords, passwords, passwords)
                 .filter((email, original, updated, replay) -> !updated.equals(replay))
