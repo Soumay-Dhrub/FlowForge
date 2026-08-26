@@ -2,6 +2,7 @@ package com.flowforge.user;
 
 import com.flowforge.audit.AuditLog;
 import com.flowforge.audit.AuditLogService;
+import com.flowforge.support.PasswordArbitraries;
 import com.flowforge.user.dto.CreateUserRequest;
 import com.flowforge.user.dto.UserResponse;
 import net.jqwik.api.Arbitraries;
@@ -86,8 +87,10 @@ class ValidRegistrationPropertyTest {
                         Arbitraries.of("example.com", "flowforge.io", "corp.test"))
                 .as((localPart, domain) -> localPart.toLowerCase() + "@" + domain);
 
-        Arbitrary<String> passwords = Arbitraries.strings().ofMinLength(8).ofMaxLength(64)
-                .filter(password -> !password.isBlank());
+        // Bounded in bytes as well as characters: arbitrary Unicode can put 64 characters past
+        // BCrypt's 72-byte input budget, which is outside the payloads this property claims to
+        // cover. See PasswordArbitraries.
+        Arbitrary<String> passwords = PasswordArbitraries.valid(64);
 
         return Combinators.combine(names, emails, passwords).as(Registration::new);
     }

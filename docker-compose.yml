@@ -27,6 +27,14 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-flowforge}
       DB_USERNAME: ${POSTGRES_USER:-flowforge}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-flowforge}
+      # First-run administrator. A clean database has no users and no way to create one — every
+      # account-creating route requires an existing ADMIN — so without this the login page has
+      # nothing to accept. Only fires while the users table is empty. Leaving the password blank
+      # generates a random one and prints it in the backend log:
+      #   docker compose logs backend | grep -A6 "first administrator"
+      BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-true}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@flowforge.local}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production-must-be-at-least-256-bits-long}
       JWT_ACCESS_EXPIRY_MS: ${JWT_ACCESS_EXPIRY_MS:-900000}
       JWT_REFRESH_EXPIRY_MS: ${JWT_REFRESH_EXPIRY_MS:-2592000000}
@@ -65,8 +73,12 @@ services:
         # frontend itself, so the backend must be addressed by its compose service name.
         API_PROXY_TARGET: http://backend:8080
     container_name: flowforge-frontend
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:${BACKEND_PORT:-8080}
+    # No NEXT_PUBLIC_* variables here on purpose. Next.js substitutes them into the bundle during
+    # `next build`, so a value supplied to the running container is never read — one used to be set
+    # here, which looked like the way to point the frontend at a different backend and silently did
+    # nothing. The browser calls the relative /api path, which the server-side rewrite forwards to
+    # API_PROXY_TARGET (the build arg above). Changing the backend address therefore means
+    # rebuilding the image, not editing this section.
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:

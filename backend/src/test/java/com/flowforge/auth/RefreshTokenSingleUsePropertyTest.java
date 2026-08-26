@@ -8,6 +8,7 @@ import com.flowforge.notification.RecordingEmailSender;
 import com.flowforge.user.Role;
 import com.flowforge.user.User;
 import com.flowforge.user.UserRepository;
+import com.flowforge.support.PasswordArbitraries;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
 import net.jqwik.api.Combinators;
@@ -83,8 +84,8 @@ class RefreshTokenSingleUsePropertyTest {
                         Arbitraries.strings().alpha().numeric().ofMinLength(1).ofMaxLength(20),
                         Arbitraries.of("example.com", "flowforge.io", "corp.test"))
                 .as((localPart, domain) -> localPart.toLowerCase() + "@" + domain);
-        Arbitrary<String> passwords = Arbitraries.strings().ofMinLength(8).ofMaxLength(48)
-                .filter(pw -> !pw.isBlank());
+        // Bounded in bytes as well as characters — see PasswordArbitraries.
+        Arbitrary<String> passwords = PasswordArbitraries.valid(48);
 
         return Combinators.combine(emails, passwords).as(Credentials::new);
     }
