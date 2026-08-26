@@ -9,7 +9,7 @@ FlowForge is a configurable workflow orchestration platform that lets teams desi
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 14, TypeScript, Tailwind CSS, React Flow (`@xyflow/react`), React Query |
-| Backend | Spring Boot 3.2 (Java 21), Spring Security (JWT), Spring Data JPA, MapStruct, Lombok |
+| Backend | Spring Boot 3.5 (Java 25), Spring Security (JWT), Spring Data JPA, MapStruct, Lombok |
 | Database | PostgreSQL 15, Flyway migrations |
 | Build | Maven 3.9+ (backend), pnpm (frontend) |
 | Containerization | Docker, docker-compose |
@@ -19,7 +19,7 @@ FlowForge is a configurable workflow orchestration platform that lets teams desi
 
 ## Prerequisites
 
-- **Java 21** (e.g. via SDKMAN: `sdk install java 21-tem`)
+- **Java 25** (e.g. via SDKMAN: `sdk install java 25-tem`)
 - **Maven 3.9+** (`mvn --version`)
 - **Docker Desktop** (includes Docker Compose v2)
 - **Node.js 20+** and **pnpm** (`npm install -g pnpm`)
@@ -127,7 +127,7 @@ Copy `.env.example` to `.env` and fill in values before running.
 
 ```
 FlowForge/
-├── backend/                        Spring Boot API (Java 21 / Maven)
+├── backend/                        Spring Boot API (Java 25 / Maven)
 │   ├── src/main/java/com/flowforge/
 │   │   ├── FlowForgeApplication.java
 │   │   ├── auth/                   JWT auth, password reset
