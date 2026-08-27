@@ -24,24 +24,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Property 9: Published Version Immutability.
- *
- * <p>For any published workflow version, its graph cannot be altered afterwards — no draft save
- * reaches it and no second publish rewrites it — and publishing a further version adds a version with
- * an incremented number while leaving every prior version's {@code graph_json} byte-identical.</p>
- *
- * <p>"Byte-identical" is asserted literally: the stored snapshot is serialized to JSON before the
- * second publish and compared to the serialization afterwards, so a reordered key or a mutated nested
- * config map would fail. That is the guarantee running instances depend on (Requirement 7.7) — an
- * instance keeps executing the definition it started on, whatever the designer does next.</p>
- *
- * <p>Both graphs are generated as arbitrary well-formed chains, since publishing a malformed graph is
- * refused outright and is Property 8's subject. The chain length and its middle node types vary, so
- * the second publish genuinely replaces the shape rather than repeating it.</p>
- *
- * <p><b>Validates: Requirements 7.6, 7.7</b></p>
- */
 @Tag("flowforge")
 class PublishedVersionImmutabilityPropertyTest {
 

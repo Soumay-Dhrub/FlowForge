@@ -12,33 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Decides whether an upload's type is acceptable (Requirement 14.3).
- *
- * <h2>Why the client's {@code Content-Type} is not the gate</h2>
- * <p>The part's declared type is attacker-controlled: it is a header the uploading client writes, so
- * "application/pdf" costs nothing to claim and an allowlist checked against it alone accepts any bytes
- * at all. That matters because those bytes are stored and later handed back to a browser — a script
- * served under a trusted-looking type is the whole of a stored-XSS or drive-by download.
- *
- * <p>So the check has two halves and both must pass:
- * <ol>
- *   <li>the declared type is on the configured allowlist ({@code app.attachment.allowed-types}); and</li>
- *   <li>the file's leading bytes carry a signature that is <em>consistent</em> with that declared type.</li>
- * </ol>
- *
- * <p>Neither half alone is enough. The signature alone cannot separate a {@code .docx} from any other
- * ZIP — both begin {@code PK\003\004} — so the declared type is what narrows a ZIP container to "Word
- * document", and the allowlist is what says which types this deployment takes at all. The signature is
- * what stops the declaration being a free-form claim. Where they disagree the upload is refused rather
- * than re-labelled: silently storing a JPEG that claimed to be a PDF would make {@code content_type} a
- * lie for every later reader.
- *
- * <p>This is signature sniffing, not full content validation. A genuine ZIP whose entries are not a Word
- * document still passes, and a real anti-malware scan is a deployment concern rather than something this
- * class can pretend to do. What it does buy is that stored bytes always match their recorded type for the
- * formats the platform accepts.
- */
 @Component
 @Slf4j
 public class AttachmentTypeGate {
@@ -95,15 +68,6 @@ public class AttachmentTypeGate {
         log.info("Attachment types accepted: {}", this.allowedTypes);
     }
 
-    /**
-     * The type an upload is accepted as.
-     *
-     * @param declaredContentType the part's {@code Content-Type}, possibly with parameters
-     * @param header              the file's leading bytes, up to {@link #HEADER_BYTES}
-     * @return the accepted type, normalised to lower case without parameters
-     * @throws UnsupportedMediaTypeException 415 when the declared type is not allowed, when the bytes
-     *                                       match no known signature, or when the two disagree
-     */
     public String accept(String declaredContentType, byte[] header) {
         String declared = normalise(declaredContentType);
         if (declared.isEmpty()) {
@@ -129,15 +93,6 @@ public class AttachmentTypeGate {
         return declared;
     }
 
-    /**
-     * The extension an accepted type is stored under.
-     *
-     * <p>Derived from the type rather than from the client's file name, so a name like
-     * {@code invoice.pdf.exe} cannot decide what the stored file is called.
-     *
-     * @param acceptedContentType a type this gate has already accepted
-     * @return the extension including the dot, or {@code ".bin"} for anything unmapped
-     */
     public String extensionFor(String acceptedContentType) {
         return EXTENSION_BY_TYPE.getOrDefault(normalise(acceptedContentType), ".bin");
     }

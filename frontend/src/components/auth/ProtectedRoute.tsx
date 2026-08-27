@@ -1,13 +1,5 @@
 "use client";
 
-/**
- * Gate for authenticated pages. Unauthenticated visitors are sent to `/login`; nothing protected
- * is rendered while the session is still being restored.
- *
- * This is a client-side guard, not a security boundary — the API rejects unauthenticated calls
- * with 401 regardless. Next.js middleware cannot be used here because the tokens live in
- * `localStorage`, which the edge runtime cannot read.
- */
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";

@@ -15,8 +15,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Java 21 is the project's target and the newest release Spring Boot 3.2.5 supports;
-      # its repackage goal cannot read class files from a newer JDK.
+      # Boot 3.2.5's repackage goal cannot read class files from a JDK newer than 21.
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -31,20 +30,12 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      # Unit tests and the jqwik property tests. Surefire excludes the "integration" group, so this
-      # stays fast and needs no Docker.
+      # Surefire excludes the "integration" group, so this needs no Docker.
       - name: Run backend unit and property tests
         working-directory: ./backend
         run: mvn verify
 
-      # The integration tests are the ones that catch what unit tests structurally cannot: this project
-      # has already shipped a draft-save bug that every in-memory test passed, and an attachment upload
-      # that only failed against a real container. They were excluded from the command above, so
-      # without this step they had never run in CI at all.
-      #
-      # Testcontainers needs a Docker daemon, which ubuntu-latest provides. All the integration classes
-      # share one PostgreSQL container via IntegrationTestBase, so this costs one startup rather than one
-      # per class.
+      # Excluded above, so they need their own step. All classes share one container.
       - name: Run backend integration tests
         working-directory: ./backend
         run: mvn verify -Pintegration -DfailIfNoTests=false
@@ -66,19 +57,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # pnpm must exist before setup-node, because `cache: 'pnpm'` asks pnpm for its store path.
-      # The version comes from the "packageManager" field in frontend/package.json, so CI and a
-      # developer's corepack-managed pnpm are the same version by construction.
+      # Before setup-node: `cache: 'pnpm'` asks pnpm for its store path.
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           package_json_file: frontend/package.json
 
-      # Previously this asked for `cache: 'npm'` keyed on frontend/package-lock.json — a file this
-      # repository does not have, because it uses pnpm. setup-node treats an unresolvable
-      # cache-dependency-path as a hard error ("Some specified paths were not resolved"), so the
-      # whole frontend job failed before installing anything. Caching pnpm's own store is both
-      # correct and what the lockfile supports.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -117,10 +101,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Every build is tagged with the commit SHA, which is the only tag that identifies exactly what
-      # is running. `latest` is added on main as well, so a deployment can follow the branch, but a
-      # moving tag is never the only one an image has: given a running container you can always get
-      # back to the commit it was built from.
+      # SHA tag always, so a running container traces back to its commit.
       - name: Work out the image tags
         id: tags
         run: |
@@ -132,19 +113,10 @@ jobs:
             echo "frontend=flowforge-frontend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
-      # The two cache options below are load-bearing, for reasons that cost a red build to learn.
-      #
-      # scope: the gha backend defaults every build to the scope "buildkit". Both images are built
-      # in this one job, so with the default they share a single cache key — the second build
-      # overwrites the first's cache, and the two contend over the same reservation. A distinct
-      # scope per image is the documented arrangement for building more than one image.
-      #
-      # ignore-error: a failed cache *export* used to fail the whole job, which is the wrong
-      # trade. The image had already built successfully; only the upload of the layer cache
-      # failed, with "error writing layer blob: failed to reserve cache" — a known intermittent
-      # fault in the gha exporter (docker/build-push-action#1571). The cache is an optimisation,
-      # so losing it should cost time on the next run, never correctness on this one. Note this
-      # suppresses cache-export errors only; a genuine build failure still fails the job.
+      # scope: the gha backend defaults to "buildkit", so two images in one job would share a cache
+      # key and contend over the same reservation.
+      # ignore-error: the exporter intermittently fails on "failed to reserve cache"
+      # (docker/build-push-action#1571) after the image has already built. Build failures still fail.
       - name: Build backend Docker image
         uses: docker/build-push-action@v5
         with:
@@ -155,10 +127,7 @@ jobs:
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend,ignore-error=true
 
-      # API_PROXY_TARGET is not passed here on purpose: the Dockerfile defaults it to
-      # http://backend:8080, the compose service name. It is a BUILD-time value -- Next freezes rewrite
-      # destinations into routes-manifest.json -- so deploying somewhere the backend has a different
-      # address means rebuilding with a different arg, not setting an environment variable.
+      # API_PROXY_TARGET stays at the Dockerfile default; it is build-time, not runtime.
       - name: Build frontend Docker image
         uses: docker/build-push-action@v5
         with:

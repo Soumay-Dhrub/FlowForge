@@ -19,36 +19,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * The Notification node: tells the configured recipients something, then moves on
- * (Requirements 9.2, 17.1).
- *
- * <p>Fire and continue — the node has no decision to wait for, so it notifies and then advances
- * through {@link NodeTransitions} in the same {@code advance} call. Notifications are written inside
- * the engine's transaction, so a failure later in the same call takes them with it: nobody is told
- * about a step the instance never durably reached.
- *
- * <h2>Configuration read from {@code config_json}</h2>
- * <table border="1">
- *   <caption>Notification node configuration keys</caption>
- *   <tr><th>Key</th><th>Type</th><th>Meaning</th></tr>
- *   <tr><td>{@code recipientUserIds}</td><td>UUID string, or list of them</td>
- *       <td>Notify these specific users.</td></tr>
- *   <tr><td>{@code recipientRoles}</td><td>role name, or list of them</td>
- *       <td>Notify every active member of these roles.</td></tr>
- *   <tr><td>{@code eventType}</td><td>string, ≤ 50 chars</td>
- *       <td>Event type recorded on the notification. Defaults to
- *           {@link NotificationEventTypes#WORKFLOW_NOTIFICATION}.</td></tr>
- *   <tr><td>{@code message}</td><td>string</td>
- *       <td>Human-readable text carried in the notification payload.</td></tr>
- * </table>
- *
- * <p>With no recipients configured at all the initiator is notified — the sensible reading of a node
- * that says "tell someone" on a request that has exactly one obvious interested party, and the common
- * case of acknowledging a submission. A recipient that <em>is</em> named but cannot be resolved is a
- * different matter and fails loudly ({@link AssigneeResolver}): the designer meant a particular
- * audience and it does not exist, so silently notifying somebody else would hide a broken definition.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -78,12 +48,6 @@ public class NotificationNodeExecutor implements NodeExecutor, NodeConfigRule {
         return NodeType.NOTIFICATION;
     }
 
-    /**
-     * Notify the configured audience, then advance along the node's single outgoing edge.
-     *
-     * @throws com.flowforge.common.exception.AppException 500 when a configured recipient cannot be
-     *         resolved, or when the node does not have exactly one outgoing edge
-     */
     @Override
     public void execute(WorkflowInstance instance, WorkflowNode node) {
         String eventType = NodeConfig.string(node, CONFIG_EVENT_TYPE)
@@ -119,12 +83,6 @@ public class NotificationNodeExecutor implements NodeExecutor, NodeConfigRule {
         return payload;
     }
 
-    /**
-     * A Notification node needs no recipients — with none it notifies the initiator, which is the whole
-     * point of an acknowledgement step. What it does need is an {@code eventType} the database can
-     * store: {@code notifications.event_type} is {@code VARCHAR(50)}, so a longer one publishes fine and
-     * then fails on insert, at execution time, inside a frozen version (Requirement 7.5).
-     */
     @Override
     public List<String> violations(WorkflowNode node, List<WorkflowEdge> outgoingEdges) {
         List<String> violations = new ArrayList<>();

@@ -224,11 +224,6 @@ class WorkflowEngineServiceTest {
                 .containsExactly(start.getId(), approval.getId(), approval.getId());
     }
 
-    /**
-     * The seam tasks 17–19 build on, driven by the engine: executors route with
-     * {@link NodeTransitions} rather than knowing their successor, and the engine chains the graph
-     * Start → Notification → Approval off the edges alone.
-     */
     @Test
     void advance_followsTheGraphWhenExecutorsRouteThroughNodeTransitions() {
         Workflow workflow = fixture.workflow("Expense Approval");

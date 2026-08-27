@@ -27,52 +27,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Audits service-layer writes that do not audit themselves (Requirement 19.1).
+ * Audits service writes that do not audit themselves. A net, not the guarantee.
  *
- * <h2>What this is for, and what it is not</h2>
- * <p>It is a net, not the guarantee. Services record their own entries at the point of change, and those
- * entries are strictly better than anything an aspect can produce: they name the action in the
- * vocabulary of the domain ({@code PUBLISH_VERSION}, {@code ESCALATE_TASK}), they identify the entity
- * that actually changed, and they carry a real before/after diff because the code that changed the thing
- * had it in hand. This aspect exists so that coverage does not depend on every future author remembering
- * to add such a call.
- *
- * <h2>No duplicates</h2>
- * <p>Because both mechanisms exist, the obvious failure is two rows for one action, and a trail that says
- * everything twice is worse than one that says it once — a reviewer counting approvals would get the wrong
- * answer. So the aspect takes a reading of {@link AuditLogService#explicitWrites()} before the method runs
- * and compares it afterwards: if the invocation recorded anything explicitly, the aspect writes nothing at
- * all. The specific description wins over the generic one.
- *
- * <p>That rule is transitive, deliberately. If an intercepted method calls a service that records
- * explicitly, the outer method is not logged either. One user action produces one row describing it, not
- * one row per layer it passed through.
- *
- * <h2>Where it cannot see</h2>
- * <p>Two limits, both stated plainly because a completeness property that ignored them would be measuring
- * the wrong thing.
- * <ul>
- *   <li><b>Self-invocation is invisible.</b> Spring AOP works by proxy, so {@code this.updateFoo()} inside
- *       a service never passes through the proxy and no advice runs. An aspect therefore cannot be the
- *       source of truth for coverage of internal calls, which is the second reason the explicit calls
- *       remain.</li>
- *   <li><b>There is no before-state.</b> The advice is handed a method and its arguments, not an entity;
- *       it cannot know which row is about to change, so it cannot read it first. {@code before_state} is
- *       therefore {@code null} on aspect-written entries and {@code after_state} records what the method
- *       was asked to do and what it returned. Entries with a real diff come from the explicit calls, which
- *       is why they are not being removed.</li>
- * </ul>
- *
- * <h2>Noise</h2>
- * <p>The pointcut is broad by design — that is what makes it a net — so three things narrow it. Only
- * {@code public} methods on {@code *Service} beans under {@code com.flowforge} are matched, so helpers and
- * package-private internals are out. Read-only methods are skipped, detected by
- * {@code @Transactional(readOnly = true)} on the method or its class, which is how this codebase already
- * marks a query. And a method whose entity cannot be identified is skipped rather than logged as an
- * unattributable row: {@code audit_logs.entity_id} is {@code NOT NULL}, and an entry that cannot say what
- * it is about is noise in the strictest sense.
- *
- * <p>A method that throws is never audited. The action did not happen.
+ * <p>Skips the entry entirely when the invocation already recorded one explicitly, so one action
+ * does not produce two rows. Two known blind spots: self-invocation is invisible because Spring AOP
+ * is proxy-based, and there is no before-state, so before_state is null on aspect-written entries.
  */
 @Aspect
 @Component
@@ -102,12 +61,6 @@ public class AuditLogAspect {
     private final AuditLogService auditLogService;
     private final ObjectMapper objectMapper;
 
-    /**
-     * Public write methods on FlowForge services.
-     *
-     * <p>The five verbs are the ones Requirement 19.1 enumerates. {@code within(com.flowforge.audit..*)}
-     * is excluded because auditing the audit service would recurse.
-     */
     @Pointcut("("
             + "execution(public * com.flowforge..*Service.create*(..)) || "
             + "execution(public * com.flowforge..*Service.update*(..)) || "
@@ -118,14 +71,6 @@ public class AuditLogAspect {
     void serviceWrite() {
     }
 
-    /**
-     * Run the method, then record an entry if the method did not record one itself.
-     *
-     * @param joinPoint the intercepted invocation
-     * @return whatever the method returned
-     * @throws Throwable whatever the method threw, untouched — an audit concern must not change the
-     *                   exception a caller sees
-     */
     @Around("serviceWrite()")
     public Object auditServiceWrite(ProceedingJoinPoint joinPoint) throws Throwable {
         int writesBefore = AuditLogService.explicitWrites();
@@ -161,12 +106,6 @@ public class AuditLogAspect {
         return result;
     }
 
-    /**
-     * The entry this invocation implies, or {@code null} when it should not be audited.
-     *
-     * <p>Returns a detached {@link AuditLog} used purely as a value carrier — it is never persisted
-     * directly, so that every row still goes through {@link AuditLogService#record}.
-     */
     private AuditLog derive(ProceedingJoinPoint joinPoint, Object result) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Class<?> targetType = joinPoint.getTarget() == null
@@ -193,13 +132,6 @@ public class AuditLogAspect {
                 .build();
     }
 
-    /**
-     * Whether the method is a query, judged by {@code @Transactional(readOnly = true)} on the method or
-     * its class.
-     *
-     * <p>Not a guess about the name: {@code updateCache} and {@code createReport} both read like writes.
-     * This codebase marks its queries with that annotation, so the annotation is the signal.
-     */
     private boolean isReadOnly(Class<?> targetType, MethodSignature signature) {
         Transactional onMethod = null;
         try {
@@ -216,13 +148,6 @@ public class AuditLogAspect {
         return onClass != null && onClass.readOnly();
     }
 
-    /**
-     * The id of the thing that changed: the returned entity or DTO's id if it has one, otherwise the
-     * first {@code UUID} argument.
-     *
-     * <p>The return value is preferred because on a create it is the only place the new id exists. The
-     * argument fallback covers {@code deleteX(UUID id)} and any method whose return says nothing.
-     */
     private Optional<UUID> entityId(Object result, Object[] arguments) {
         Optional<UUID> fromResult = idOf(result);
         if (fromResult.isPresent()) {
@@ -258,13 +183,6 @@ public class AuditLogAspect {
         return Optional.empty();
     }
 
-    /**
-     * The entity discriminator implied by the service's name: {@code UserService} audits {@code User}.
-     *
-     * <p>A convention rather than a registry, because a registry would need an entry for every service
-     * ever added and would be silently wrong the first time somebody forgot — whereas a service whose name
-     * does not describe what it changes is visible in the trail as an odd entity type.
-     */
     private String entityType(Class<?> targetType) {
         String name = targetType.getSimpleName();
         // CGLIB proxies are named Foo$$SpringCGLIB$$0; take the real class's name.
@@ -278,12 +196,6 @@ public class AuditLogAspect {
         return name.isEmpty() ? "Unknown" : name;
     }
 
-    /**
-     * The action name: the method's verb plus the entity type, e.g. {@code UPDATE_USER}.
-     *
-     * <p>{@code audit_logs.action} is {@code VARCHAR(50)}, so the result is capped — a truncated action is
-     * still searchable, whereas an over-long one fails the insert and loses the entry entirely.
-     */
     private String action(String methodName, String entityType) {
         String verb = verbOf(methodName);
         String suffix = upperSnake(entityType);
@@ -314,14 +226,6 @@ public class AuditLogAspect {
         return out.toString();
     }
 
-    /**
-     * What the aspect can honestly say about the change: which method ran, what it was asked to do, and
-     * what it returned.
-     *
-     * <p>Not "the entity's state after the change" — see the class comment for why the aspect cannot know
-     * that. The {@link #RECORDED_BY_KEY} marker says so in the row itself, so nobody reads an aspect entry
-     * as a diff.
-     */
     private Map<String, Object> afterState(
             MethodSignature signature, Object[] arguments, Object result) {
         Map<String, Object> state = new LinkedHashMap<>();
@@ -341,19 +245,6 @@ public class AuditLogAspect {
         return state;
     }
 
-    /**
-     * A value reduced to something safe and bounded to store.
-     *
-     * <p>Three jobs, all of them necessary. <b>Redaction</b>: a {@code CreateUserRequest} carries a raw
-     * password, and an audit trail that recorded it would be a plaintext credential store with a
-     * compliance label on it. <b>Bounding</b>: an uploaded file or a workflow graph would otherwise put
-     * megabytes in a JSONB column on every call. <b>Tolerance</b>: a value that will not serialise becomes
-     * its type name, because an unserialisable argument is not a reason to lose the entry.
-     *
-     * @param name  the key this value sits under, which is what redaction matches on
-     * @param value the value
-     * @param depth current nesting depth, to stop a cyclic object graph
-     */
     private Object sanitise(String name, Object value, int depth) {
         if (value == null) {
             return null;

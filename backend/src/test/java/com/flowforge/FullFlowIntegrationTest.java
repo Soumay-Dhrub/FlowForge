@@ -46,19 +46,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * The two journeys a user actually takes, end to end against a real database.
- *
- * <p>Every other integration test proves one feature works. These prove the features work
- * <em>together</em> — which is a different claim, and the one that breaks first when a seam shifts. A
- * refresh token that rotates correctly in isolation is worth little if publishing a workflow leaves no
- * version for a submission to bind to.
- *
- * <p>Assertions read back through repositories rather than trusting returned objects, and each service
- * call commits in its own transaction, as an HTTP request would.
- *
- * <p>Validates: Requirements 1.1, 2.1, 2.4, 2.5, 6.4, 7.6, 9.1, 13.1, 19.1.
- */
 class FullFlowIntegrationTest extends IntegrationTestBase {
 
     @Autowired
@@ -100,13 +87,6 @@ class FullFlowIntegrationTest extends IntegrationTestBase {
     @Autowired
     private DepartmentRepository departmentRepository;
 
-    /**
-     * Provision → log in → refresh → log out (Requirements 1.1, 2.1, 2.4, 2.5).
-     *
-     * <p>The refresh half is the point. Rotation is only meaningful across committed transactions: the
-     * old token has to be dead to a <em>later</em> request, which is exactly what a single-transaction
-     * test cannot show.
-     */
     @Test
     @DisplayName("A user can be provisioned, log in, rotate their session, and log out")
     void theWholeAuthenticationJourney() {
@@ -252,13 +232,6 @@ class FullFlowIntegrationTest extends IntegrationTestBase {
         return pending.getFirst();
     }
 
-    /**
-     * The audit entries recorded against one entity.
-     *
-     * <p>Scoped by entity type and id rather than scanned from the whole table — {@code AuditLogRepository}
-     * deliberately offers no {@code findAll}, since it is append-only and a repository that hands out
-     * every row invites exactly the bulk operations it exists to prevent.
-     */
     private List<AuditLog> entriesFor(String entityType, UUID entityId) {
         return auditLogRepository.findByEntityTypeAndEntityIdOrderByCreatedAtDesc(entityType, entityId);
     }

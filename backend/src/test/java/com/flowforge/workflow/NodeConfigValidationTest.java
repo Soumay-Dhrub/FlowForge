@@ -16,21 +16,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Rule 5: a node has to be configured well enough to run before its graph can be published
- * (Requirement 7.5).
- *
- * <p>These tests exist because of a real defect. An Approval node naming no approver satisfied all four
- * structural rules, published cleanly, and then failed every request that reached it — at which point
- * the version was immutable and the person seeing the 500 was the one least able to fix it. Publishing
- * is the last moment the definition is still editable, so anything knowable from the definition alone
- * has to be caught here.
- *
- * <p>The rules under test are stubs rather than the real executors: this is the {@code workflow} package
- * and the executors live in {@code engine}, which depends on it. What is being tested is that
- * {@code WorkflowVersionService} applies whatever rules it is given, collects every violation, and
- * refuses to publish — the executors' own rules are tested where they live.
- */
 class NodeConfigValidationTest {
 
     private static final String APPROVER_MISSING = "Approval node configures no approver";

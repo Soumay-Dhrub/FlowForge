@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * The React Flow canvas.
- *
- * Split out from {@link ./WorkflowBuilder WorkflowBuilder} for one concrete reason: turning a drop
- * point into graph coordinates needs `useReactFlow`, which only works inside a `ReactFlowProvider`.
- * Keeping the provider and this component together means the builder above can own all the state
- * without knowing anything about viewports.
- *
- * The canvas holds no state of its own. Every change is reported upward, so the graph the save button
- * sends is the same object the canvas is drawing.
- */
 import { useCallback, useMemo, useRef } from "react";
 import {
   Background,

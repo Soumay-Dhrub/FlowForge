@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * The personal dashboard (Requirements 20.1, 20.2, 20.3).
- *
- * One request, three widgets: `GET /api/reports/dashboard` returns the caller's pending tasks, the
- * requests they submitted, and their recent activity together. Three separate queries would render
- * three independently-stale views of the same moment, and the endpoint exists precisely so a
- * dashboard is one snapshot.
- *
- * There is no user parameter to get wrong: the subject is whoever the token identifies, so this page
- * cannot be pointed at somebody else's queue.
- */
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ClipboardList, History, Send, type LucideIcon } from "lucide-react";
@@ -26,12 +15,6 @@ import Card, { StatCard } from "@/components/ui/Card";
 import PageHeader from "@/components/ui/PageHeader";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 
-/**
- * A titled panel, so the three widgets share one visual and heading structure.
- *
- * The icon sits in a tinted tile rather than floating next to the text: at 20px a bare glyph beside a
- * heading reads as debris, while the same glyph in a container reads as a deliberate marker.
- */
 function Widget({
   title,
   icon: Icon,

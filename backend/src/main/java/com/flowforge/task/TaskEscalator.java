@@ -18,25 +18,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Escalating one overdue task, transactionally (Requirements 11.2, 11.3, 11.4).
- *
- * <p>Separate from {@link EscalationScheduler} on purpose, and not merely for tidiness: Spring's
- * {@code @Transactional} is applied by a proxy, so a scheduler calling its own escalation method would
- * bypass the proxy entirely and run with no transaction at all — silently, since nothing about
- * {@code this.escalate(...)} looks wrong. Putting the transactional work in a collaborator makes the
- * boundary real.
- *
- * <p>{@link Propagation#REQUIRES_NEW} gives each task its own transaction, so one unreadable node
- * config or one vanished user rolls back only that task and leaves the escalations that already
- * succeeded in the same sweep committed.
- *
- * <h2>Skip rather than fail</h2>
- * <p>Escalation is a safety net. A task whose node names no escalation target, or names one that no
- * longer resolves to an active user, is left PENDING with its rightful assignee and a warning
- * logged. Reassigning to nobody, or erroring the instance, would turn a configuration oversight into
- * a broken request — and the person who submitted it could not fix either.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -50,16 +31,6 @@ public class TaskEscalator {
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
 
-    /**
-     * Reassign one overdue task to its escalation target.
-     *
-     * <p>The task is re-read and re-checked inside the transaction, because it may have been actioned,
-     * delegated or already escalated between the sweep's query and this call.
-     *
-     * @param taskId the task to escalate
-     * @param now    the sweep's reference time, so every task in one sweep judges "overdue" alike
-     * @return {@code true} when the task was escalated, {@code false} when it was skipped
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean escalate(UUID taskId, Instant now) {
         Task task = taskRepository.findById(taskId).orElse(null);
@@ -114,12 +85,6 @@ public class TaskEscalator {
         return true;
     }
 
-    /**
-     * The escalation target on a node, or empty when it names none or names it unusably.
-     *
-     * <p>A malformed value is empty rather than an exception: the caller's answer to "no target" is to
-     * leave the task alone, which is also the right answer to "unreadable target".
-     */
     private Optional<UUID> escalationTarget(WorkflowNode node) {
         Map<String, Object> config = node == null ? null : node.getConfigJson();
         Object raw = config == null ? null : config.get(CONFIG_ESCALATION_USER_ID);
@@ -139,14 +104,6 @@ public class TaskEscalator {
         }
     }
 
-    /**
-     * Tell one party about the escalation.
-     *
-     * @param recipient who to tell; skipped when absent
-     * @param task      the escalated task
-     * @param target    the new assignee
-     * @param losingIt  {@code true} when the recipient is the previous assignee
-     */
     private void notify(User recipient, Task task, User target, boolean losingIt) {
         if (recipient == null) {
             return;

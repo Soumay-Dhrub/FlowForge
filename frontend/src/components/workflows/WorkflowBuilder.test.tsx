@@ -9,14 +9,6 @@ import * as workflowsApi from "@/lib/workflowsApi";
 import type { RoleName, User, Workflow, WorkflowVersion } from "@/types";
 import { createTestQueryClient } from "@/test/renderWithQuery";
 
-/**
- * React Flow is replaced by a harness rather than rendered for real.
- *
- * jsdom has no layout, so a canvas cannot be dragged in it — and the behaviour under test is not the
- * library's rendering but *our* handlers: what a connection does to the graph, and what the graph
- * serialises to. The harness therefore renders the nodes and edges it is given and exposes one button
- * that calls the real `onConnect`, which is exactly the drag a pointer would perform.
- */
 jest.mock("@xyflow/react", () => {
   const react = jest.requireActual("react");
   type StubNode = { id: string; data: { nodeType: string } };

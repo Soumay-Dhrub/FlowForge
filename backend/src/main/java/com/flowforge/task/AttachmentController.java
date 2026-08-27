@@ -19,19 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Attachment endpoints on a request (Requirements 14.1, 14.2, 14.3).
- *
- * <h2>Authorization</h2>
- * <p>{@code isAuthenticated()} is as far as the annotation can usefully go: what protects an attachment
- * is being <em>part of the request</em>, not holding a role, and that is a database question rather than
- * an expression one. {@link AttachmentService} applies the participant rule through
- * {@link InstanceParticipants} and answers 403 to anyone else — including ADMIN and MANAGER, for the
- * reasons set out there.
- *
- * <p>Errors follow Requirement 14: 413 for an oversized file, 415 for a type that is not accepted or
- * whose bytes contradict what was declared, 403 for a non-participant, 404 for an unknown request.
- */
 @RestController
 @RequestMapping("/api/instances/{instanceId}/attachments")
 @RequiredArgsConstructor
@@ -39,12 +26,6 @@ public class AttachmentController {
 
     private final AttachmentService attachmentService;
 
-    /**
-     * Attach a file to a request (Requirement 14.1).
-     *
-     * <p>The part is named {@code file}. A request that omits it gets 400 from Spring's part resolution
-     * before this method runs.
-     */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<AttachmentResponse>> upload(

@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * Chrome shared by every authenticated page: sidebar navigation, the notification bell and the profile
- * menu.
- *
- * Mounted by the `(app)` route group's layout, so a page joins the shell by living in that group — no
- * per-page wrapper to forget, and the public pages sit outside the group and get no shell at all.
- *
- * Two things this fixes beyond appearance. The sidebar used to simply vanish below `md`, leaving no way
- * to navigate on a phone at all; there is now a drawer. And the header is sticky, because these pages
- * are long tables and scrolling to the bottom of one used to mean scrolling back up to reach anything.
- */
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, Workflow, X } from "lucide-react";
@@ -132,12 +121,6 @@ function Brand() {
   );
 }
 
-/**
- * The caller's role, pinned to the bottom of the sidebar.
- *
- * What you can see in this product depends entirely on your role, so "why can I not find Users?" is a
- * predictable question. Showing the role answers it without a support conversation.
- */
 function RoleFooter({ role }: { role: string | undefined }) {
   if (!role) {
     return null;

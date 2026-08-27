@@ -24,34 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Accepting supporting documents onto a request (Requirements 14.1, 14.2, 14.3).
- *
- * <h2>The order the checks run in</h2>
- * <ol>
- *   <li><b>Participation</b> — a stranger to the request is refused 403 before a single byte is read.
- *       Attachments are part of a request's record, and Requirement 15.3's participant rule is applied
- *       here through the same {@link InstanceParticipants} collaborator comments use.</li>
- *   <li><b>Declared size</b> — an upload whose declared length already exceeds the limit is refused 413
- *       without reading it (Requirement 14.2).</li>
- *   <li><b>Type</b> — the leading bytes are sniffed and matched against the declared type and the
- *       allowlist, so 415 happens before anything is written (Requirement 14.3). See
- *       {@link AttachmentTypeGate} for why the declared type alone is not trusted.</li>
- *   <li><b>Actual size</b> — the write itself counts bytes and aborts past the limit, which is what
- *       catches a request that understated its length.</li>
- * </ol>
- *
- * <p><b>Both limits violated at once resolves to 413.</b> Requirement 14 does not say which wins, and
- * size is checked first deliberately: it is the cheap check, and it is answerable without reading the
- * body, so a 30 MB upload is rejected on its headers rather than after being streamed far enough to
- * sniff. A caller who fixes the size then learns about the type.
- *
- * <h2>Bytes first, then the row</h2>
- * <p>The file is written before the metadata row is saved, and a failure to save the row deletes the
- * file. The reverse order would risk a committed row pointing at bytes that were never written — a
- * download that 500s forever — whereas this order's worst case is an orphaned file that no row
- * references and no reader can see.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -64,19 +36,6 @@ public class AttachmentService {
     private final AttachmentTypeGate typeGate;
     private final AuditLogService auditLogService;
 
-    /**
-     * Attach a file to a request.
-     *
-     * @param instanceId the request
-     * @param file       the uploaded part
-     * @param userId     the uploader, who must be a participant
-     * @return the stored attachment's metadata
-     * @throws EntityNotFoundException       404 when the request or the uploader does not exist
-     * @throws AppException                  403 when the uploader is not a participant, 400 when the
-     *                                       part is missing or empty
-     * @throws FileSizeLimitException        413 when the file exceeds {@code app.attachment.max-size-bytes}
-     * @throws UnsupportedMediaTypeException 415 when the type is not allowed, or the bytes contradict it
-     */
     @Transactional
     public AttachmentResponse upload(UUID instanceId, MultipartFile file, UUID userId) {
         WorkflowInstance instance = participants.requireParticipant(instanceId, userId);
@@ -142,15 +101,6 @@ public class AttachmentService {
         return toResponse(saved);
     }
 
-    /**
-     * The files attached to a request, oldest first.
-     *
-     * @param instanceId the request
-     * @param userId     the caller, who must be a participant
-     * @return the attachments' metadata
-     * @throws EntityNotFoundException 404 when the request does not exist
-     * @throws AppException            403 when the caller is not a participant
-     */
     @Transactional(readOnly = true)
     public List<AttachmentResponse> listAttachments(UUID instanceId, UUID userId) {
         participants.requireParticipant(instanceId, userId);

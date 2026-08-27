@@ -6,12 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Request DTO for a node in a draft graph payload.
- *
- * <p>{@code id} is supplied by the builder (the canvas generates node identifiers client-side) so
- * that edges in the same payload can reference their source and target nodes.
- */
 public record WorkflowNodeRequest(
         @NotNull(message = "Node id is required")
         UUID id,

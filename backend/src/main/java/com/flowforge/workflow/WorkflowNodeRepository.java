@@ -7,9 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Repository for WorkflowNode entity operations.
- */
 @Repository
 public interface WorkflowNodeRepository extends JpaRepository<WorkflowNode, UUID> {
 

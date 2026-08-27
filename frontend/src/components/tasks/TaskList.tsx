@@ -1,17 +1,5 @@
 "use client";
 
-/**
- * The task queue (Requirements 12.1, 12.2, 12.3).
- *
- * Every filter is applied by the backend, as on the workflow table: the client only holds the rows the
- * server sent, so filtering in the browser would quietly search a subset. The date controls are plain
- * dates but the endpoint takes instants, so each bound is widened to cover the whole day in the
- * reader's own zone — picking "2 Jan" for both ends must include everything raised on the 2nd.
- *
- * The workflow filter is only offered to ADMIN and MANAGER, because its options come from
- * `GET /api/workflows`, which answers an EMPLOYEE with 403. Rendering the control and firing a request
- * that is guaranteed to fail would be a dead end, not a feature.
- */
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";

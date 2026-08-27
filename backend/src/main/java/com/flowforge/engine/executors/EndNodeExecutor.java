@@ -14,20 +14,6 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * The End node: completes the instance (Requirement 9.2).
- *
- * <p>Terminating is expressed the way the {@link NodeExecutor} contract prescribes — set a terminal
- * {@link InstanceStatus} and let the engine persist it. The instance is deliberately left sitting on
- * the End node rather than having its position cleared, so a completed instance still says where it
- * finished; {@code completed_at} is stamped here because that is the moment the instance stopped
- * being in flight, and the engine's own {@code markError} stamps it the same way.
- *
- * <p>The audit entry is written directly rather than left to task 28's aspect: reaching an End node is
- * an engine state transition, not a service call the aspect will see, and Requirement 19.1 wants the
- * trail to show how an instance ended. {@code before}/{@code after} carry the status change so the
- * diff is readable without joining back to the instance.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j

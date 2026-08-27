@@ -12,17 +12,6 @@ import org.springframework.security.authentication.InsufficientAuthenticationExc
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Filter-chain-level status codes for authentication and authorization failures.
- *
- * <p>{@code RbacEnforcementPropertyTest} drives requests through MockMvc plus method security, so
- * the missing-authentication case surfaces there as an {@code AuthenticationException} that
- * {@code GlobalExceptionHandler} maps to 401. In the running application the security filter chain
- * short-circuits before any controller is reached, and the entry point decides the status. These
- * tests cover that layer, which is where a 403-instead-of-401 regression can hide.</p>
- *
- * <p><b>Validates: Requirements 3.2, 3.3</b></p>
- */
 class SecurityFilterChainTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();

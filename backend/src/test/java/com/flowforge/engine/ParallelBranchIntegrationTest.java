@@ -29,21 +29,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import com.flowforge.support.IntegrationTestBase;
 
-/**
- * Parallel branches and AND-Join synchronisation against a real PostgreSQL database.
- *
- * <p>The unit tests drive the engine through in-memory repositories, which cannot show what
- * {@code branch_status} does across transaction boundaries. That is exactly where this feature lives:
- * branches complete in separate transactions, each one committing its arrival for the next to read,
- * and the join's decision depends on reading back what earlier commits wrote into a JSONB column
- * (Requirement 10.3). An in-memory map would agree with itself no matter how the column were mapped.
- *
- * <p>Every assertion reads state back through a repository rather than trusting the object a service
- * returned, and each service call runs in — and commits — its own transaction, as an HTTP request
- * would.
- *
- * <p>Validates: Requirements 10.1, 10.2, 10.3.
- */
 class ParallelBranchIntegrationTest extends IntegrationTestBase {
 
     @Autowired
@@ -148,12 +133,6 @@ class ParallelBranchIntegrationTest extends IntegrationTestBase {
                 new CreateWorkflowRequest(name, "Two reviews that must both finish"), actorId);
     }
 
-    /**
-     * Publish Start → fork → (branch-a, branch-b) → join → End and return the published version id.
-     *
-     * <p>The fork is a Task node: a fan-out is registered when a node's work completes and it has
-     * more than one way out, which is the {@code advanceFrom} path.
-     */
     private UUID publishParallelGraph(WorkflowResponse workflow) {
         UUID draftId = versionRepository
                 .findFirstByWorkflowIdAndIsPublishedFalseOrderByVersionNumberDesc(workflow.id())

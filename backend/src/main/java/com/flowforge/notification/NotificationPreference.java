@@ -23,22 +23,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * One user's email-delivery choice for one event type (Requirement 18.2).
- *
- * <p>Maps to {@code notification_preferences} from {@code V1__initial_schema.sql}, whose
- * {@code UNIQUE (user_id, event_type)} is what makes a preference a setting rather than a history:
- * there is exactly one row per user per event, and updating it overwrites the choice instead of
- * appending a new one that a reader would have to date-order to interpret.
- *
- * <h2>An absent row is not "off"</h2>
- * <p>A user who has never opened the preferences screen has no rows at all, and the effective answer
- * for them comes from {@link EmailEventCatalog#emailByDefault(String)} rather than from this table.
- * Reading absence as "disabled" would mean the platform silently stops telling people their work is
- * waiting; reading it as "enabled" for every event type would let a workflow designer mail an
- * organisation from a canvas. The catalog draws that line per event type, and a row here is only ever
- * an override of it.
- */
 @Entity
 @Table(
         name = "notification_preferences",

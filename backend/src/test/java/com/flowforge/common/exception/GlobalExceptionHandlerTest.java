@@ -14,14 +14,6 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Status-code mapping for the two ends of the handler chain: a genuinely unknown path must stay a
- * 404, and only unclassified failures may become a 500.
- *
- * <p>The catch-all {@code @ExceptionHandler(Exception.class)} previously swallowed
- * {@link NoResourceFoundException}, so every unmapped route — including {@code /actuator/health}
- * before Actuator was on the classpath — answered 500.</p>
- */
 class GlobalExceptionHandlerTest {
 
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();

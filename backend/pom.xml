@@ -26,30 +26,12 @@
         <lombok.version>1.18.46</lombok.version>
         <jjwt.version>0.11.5</jjwt.version>
         <jqwik.version>1.8.3</jqwik.version>
-        <!--
-            1.20.x carries a docker-java that negotiates a Docker Engine API version of 1.44 or
-            newer. 1.19.7 pins 1.32, which current engines refuse outright ("client version 1.32
-            is too old"), so integration tests could not reach a container at all.
-        -->
+        <!-- 1.19.7's docker-java pins Engine API 1.32, which current engines refuse as too old. -->
         <testcontainers.version>1.20.6</testcontainers.version>
         <flyway.version>10.10.0</flyway.version>
-        <!--
-            Overrides the 1.14.13 that Spring Boot 3.2.5 manages. That version predates Java 23,
-            so on any newer JVM Mockito cannot instrument a class and every test that mocks one
-            dies with "Mockito cannot mock this class" — 40+ failures on a JDK 25 build. Byte
-            Buddy is the only reason a build needed a JDK 21 toolchain at all; with this override
-            the full suite passes on JDK 21 and on JDK 25 alike.
-
-            Scoped deliberately at the Byte Buddy version alone rather than bumping Mockito or
-            Spring Boot: it is the single artifact that has to understand the running JVM's class
-            file format, and Mockito 5.7.0 works with it unchanged.
-        -->
+        <!-- Boot 3.2.5 manages 1.14.13, which cannot instrument classes on JDK 23+. -->
         <byte-buddy.version>1.18.12</byte-buddy.version>
-        <!--
-            JUnit tags surefire skips by default. Overridden by the `integration` profile, which is
-            why this is a property: an empty <excludedGroups/> element in a profile does not clear an
-            inherited value, it inherits it, so the profile has to supply a replacement.
-        -->
+        <!-- A property because an empty <excludedGroups/> in a profile inherits rather than clears. -->
         <surefire.excluded.groups>integration</surefire.excluded.groups>
     </properties>
 
@@ -213,11 +195,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <!--
-                        Target Java 21 (the project standard, and the JDK used by CI).
-                        The release flag is used rather than source/target so the JDK 21 API
-                        signatures are enforced even when the build runs on a newer local JDK.
-                    -->
+                    <!-- release, not source/target, so the JDK 21 API is enforced on newer JDKs. -->
                     <release>${maven.compiler.release}</release>
                     <annotationProcessorPaths>
                         <path>
@@ -237,16 +215,9 @@
                 </configuration>
                 <executions>
                     <!--
-                        Class files javac writes outside the first annotation processing round —
-                        the MapStruct *MapperImpl classes, and the package-info classes emitted
-                        in the final round — carry the running JDK's class file version instead
-                        of the requested release. On a JDK newer than 21 that makes them
-                        unreadable: test compilation rejects the mappers, and Spring's classpath
-                        scanning rejects the package-info classes, so the application context
-                        will not even start. Recompiling those sources with annotation processing
-                        switched off puts them in the first round, where the requested release is
-                        honoured. On a JDK 21 build (CI, Docker) this execution is a harmless
-                        no-op.
+                        MapStruct *MapperImpl and package-info classes are written outside the first
+                        processing round, so they get the running JDK's class file version instead of
+                        the requested release. Recompiling with processing off fixes that on JDK 22+.
                     -->
                     <execution>
                         <id>recompile-generated-mappers</id>
@@ -292,30 +263,9 @@
 
     <profiles>
         <!--
-            Builds and tests against a real JDK 21 instead of whichever JVM launched Maven, so a
-            developer's build matches CI and the JRE 21 runtime image exactly.
-
-            OPT-IN, and deliberately so. This profile used to auto-activate on <jdk>[22,)</jdk>,
-            which made a hand-written ~/.m2/toolchains.xml a hard prerequisite: the toolchains
-            plugin runs at `validate`, so on any JDK newer than 21 a fresh clone failed with
-            "Cannot find matching toolchain definitions" before it compiled a single file. Nothing
-            in the README mentioned it. Since the byte-buddy.version override above lets the whole
-            suite pass on a newer JVM, that barrier bought nothing and is gone.
-
-            Use it when you want exact bytecode/runtime parity with production:
-
-                mvn -Pjdk21-toolchain verify
-
-            and register the JDK 21 location in ~/.m2/toolchains.xml:
-
-                <toolchain>
-                  <type>jdk</type>
-                  <provides><version>21</version></provides>
-                  <configuration><jdkHome>/path/to/jdk-21</jdkHome></configuration>
-                </toolchain>
-
-            Without it, <release>21</release> still pins the compiled bytecode and API level to
-            Java 21; only the JVM running the compiler and tests differs.
+            Builds on a real JDK 21 for parity with CI and the runtime image. Opt-in, because the
+            toolchains plugin runs at `validate` and would otherwise make ~/.m2/toolchains.xml a hard
+            prerequisite for a fresh clone. <release>21</release> pins the bytecode either way.
         -->
         <profile>
             <id>jdk21-toolchain</id>
@@ -347,10 +297,7 @@
         <profile>
             <id>integration</id>
             <properties>
-                <!--
-                    Exclude a tag nothing carries, which is how you say "exclude nothing" without
-                    handing surefire an empty tag expression.
-                -->
+                <!-- A tag nothing carries: "exclude nothing" without an empty tag expression. -->
                 <surefire.excluded.groups>never</surefire.excluded.groups>
             </properties>
             <build>
@@ -361,11 +308,7 @@
                         <configuration>
                             <groups>integration</groups>
                             <systemPropertyVariables>
-                                <!--
-                                    docker-java still defaults to Engine API 1.32, which engines
-                                    from Docker 25 onwards refuse. Ask for the oldest version they
-                                    all accept rather than letting the default fail the connection.
-                                -->
+                                <!-- docker-java defaults to Engine API 1.32; Docker 25+ refuses it. -->
                                 <api.version>1.44</api.version>
                             </systemPropertyVariables>
                         </configuration>

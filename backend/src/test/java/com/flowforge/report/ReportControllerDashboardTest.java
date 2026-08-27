@@ -30,13 +30,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * HTTP behaviour of the dashboard endpoint (Requirements 20.1, 20.2, 20.3).
- *
- * <p>The point of these tests is the scoping. The endpoint has no user parameter, so the checks are
- * that the answer follows the authenticated principal and that a query string cannot redirect it —
- * asking for {@code ?userId=<someone else>} must still return the caller's own dashboard.
- */
 class ReportControllerDashboardTest {
 
     private final TaskService taskService = mock(TaskService.class);

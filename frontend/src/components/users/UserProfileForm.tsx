@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * Profile edit form: name, department, and — for an administrator — role.
- *
- * The role selector is rendered only for an ADMIN, and not because it would look untidy otherwise:
- * `PATCH /api/users/{id}` refuses a self-edit that carries a `roleId` (403), which is what stops a
- * user promoting themselves. Showing the control to someone whose submission would be rejected would
- * be offering an action that cannot succeed, so a self-editing non-admin gets name and department and
- * an explanation of why their role is fixed.
- *
- * Only changed fields are sent, matching the endpoint's PATCH semantics.
- */
 import { useEffect } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

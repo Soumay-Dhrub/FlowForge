@@ -14,19 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-/**
- * Spring Security configuration for FlowForge.
- * 
- * <p>This configuration:</p>
- * <ul>
- *   <li>Disables CSRF (stateless JWT authentication)</li>
- *   <li>Configures session management as stateless</li>
- *   <li>Permits public access to /api/auth/** endpoints</li>
- *   <li>Requires authentication for all other paths</li>
- *   <li>Adds JWT authentication filter before the standard authentication filter</li>
- *   <li>Enables method-level security with @PreAuthorize</li>
- * </ul>
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -37,13 +24,6 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
 
-    /**
-     * Configure the security filter chain.
-     * 
-     * @param http the HttpSecurity to configure
-     * @return the configured SecurityFilterChain
-     * @throws Exception if configuration fails
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -82,14 +62,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * Password encoder bean using BCrypt with strength 12.
-     * 
-     * <p>BCrypt is a secure password hashing algorithm that includes
-     * a work factor to slow down brute-force attacks.</p>
-     * 
-     * @return BCrypt password encoder with strength 12
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);

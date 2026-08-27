@@ -109,11 +109,6 @@ class NotificationEmailDeliveryTest {
         assertThat(fixture.emailSender.sent()).isEmpty();
     }
 
-    /**
-     * The guarantee that matters most: a dead SMTP host cannot roll back the decision or escalation that
-     * triggered the message. {@link EmailSender} implementations must not throw, and this proves the
-     * caller survives one that does anyway.
-     */
     @Test
     @DisplayName("Requirement 17.4: a throwing mailer does not fail the notification")
     void aFailingMailerDoesNotBreakTheCaller() {

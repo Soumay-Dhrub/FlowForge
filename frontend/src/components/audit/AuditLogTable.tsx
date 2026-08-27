@@ -1,19 +1,5 @@
 "use client";
 
-/**
- * The audit log viewer (Requirements 19.3, 19.4). ADMIN only.
- *
- * <h2>Paging is server-side</h2>
- * The trail is the one table that only grows, and the endpoint caps a page at 500 entries however
- * large a size is asked for. So the page number is a query parameter, not a slice of an array the
- * client holds: filtering or paging in the browser would search whatever subset happened to be
- * fetched, which in an audit tool is worse than not searching at all.
- *
- * <h2>A missing actor is data, not a gap</h2>
- * `actorId` is nullable because the FK is `ON DELETE SET NULL` — the entry outlives the account. It is
- * rendered as "System / deleted user" rather than left blank, so the row reads as a deliberate fact
- * instead of a rendering failure.
- */
 import { useMemo, useState } from "react";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle, Download, ScrollText, SlidersHorizontal } from "lucide-react";

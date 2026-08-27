@@ -15,12 +15,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
-/**
- * Per-event email preferences and the default that applies before a user has expressed one
- * (Requirement 18.2).
- *
- * <p>Validates: Requirements 18.2, 17.4.
- */
 class NotificationPreferenceServiceTest {
 
     private InMemoryNotificationFixture fixture;

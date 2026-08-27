@@ -12,14 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * A single node on a {@link WorkflowVersion}'s graph.
- *
- * <p>{@code configJson} carries the type-specific configuration the execution engine reads at
- * runtime (label, assignee or approver role, timeout and escalation target, notification
- * recipients, and so on). {@code positionX}/{@code positionY} are canvas coordinates owned by the
- * builder UI (Requirement 6.1).
- */
 @Entity
 @Table(name = "workflow_nodes")
 @Getter

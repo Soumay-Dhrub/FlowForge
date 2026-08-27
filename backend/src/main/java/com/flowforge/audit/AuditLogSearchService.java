@@ -15,17 +15,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * The reader's side of the audit trail: filtered search and CSV export
- * (Requirements 19.3, 19.4).
- *
- * <p>Separate from {@link AuditLogService} for the same reason {@code NotificationInboxService} is
- * separate from the notification port. Every service in the system depends on the write seam to record
- * one entry; if search, paging and export lived there too, all of them would depend on the query
- * collaborator and every test double would have to stub methods it never calls.
- *
- * <p>Nothing here can modify an entry, and there is no method that could (Requirement 19.2).
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,19 +25,6 @@ public class AuditLogSearchService {
 
     private final AuditLogQueries auditLogQueries;
 
-    /**
-     * Search by actor, entity type, action, or date range (Requirement 19.3).
-     *
-     * <p>Paged rather than complete. The audit table is the one table in the system guaranteed only ever
-     * to grow, so an endpoint that returned every match would eventually fail on the size of its own
-     * response rather than on anything the caller did wrong. Taking the whole result set is what the CSV
-     * export is for, and that streams.
-     *
-     * @param filter the criteria; an empty filter matches everything
-     * @param page   zero-based page index; negative treated as the first page
-     * @param size   requested page size, clamped by {@link AuditLogFilter#pageSize(Integer)}
-     * @return the matching page, newest first, with the total match count
-     */
     @Transactional(readOnly = true)
     public AuditLogPage search(AuditLogFilter filter, int page, Integer size) {
         AuditLogFilter criteria = filter == null ? AuditLogFilter.unfiltered() : filter;
@@ -62,24 +38,6 @@ public class AuditLogSearchService {
         return new AuditLogPage(entries, auditLogQueries.count(criteria), pageIndex, pageSize);
     }
 
-    /**
-     * Stream every matching entry as CSV (Requirement 19.4).
-     *
-     * <p>Header first, then {@value #EXPORT_CHUNK_SIZE} entries per round trip, flushed after each chunk.
-     * Nothing larger than one chunk is ever in memory, which is the difference between an export that
-     * works on a year of history and one that works until it does not. Paging is by keyset rather than
-     * offset — {@link AuditLogQueries#chunkAfter} explains why offsets would repeat and skip rows against
-     * a table being appended to.
-     *
-     * <p>Its own read-only transaction, which is why the controller calls this from inside the streaming
-     * body rather than materialising a result first: by the time a {@code StreamingResponseBody} runs, the
-     * request's own transaction and Hibernate session are closed.
-     *
-     * @param filter the criteria; an empty filter exports everything
-     * @param writer the destination; not closed here, since the container owns the response stream
-     * @return how many entries were written
-     * @throws UncheckedIOException when the destination fails mid-write, e.g. the client disconnected
-     */
     @Transactional(readOnly = true)
     public long streamCsv(AuditLogFilter filter, Writer writer) {
         AuditLogFilter criteria = filter == null ? AuditLogFilter.unfiltered() : filter;

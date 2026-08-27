@@ -23,28 +23,6 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Property: an instance references the version that was published when it was submitted.
- *
- * <p>For any workflow published repeatedly, a request submitted between two publishes binds to the
- * version that was current at that moment, and keeps that binding for the rest of its life — a later
- * publish moves the {@code is_current} flag but must not re-point instances already running
- * (Requirements 9.1, 7.7). Superseded published versions and open drafts exist throughout, so
- * resolution has to pick the one flagged current rather than the newest or the first it finds.
- *
- * <p>Binding is asserted three ways, because "the id matches" alone would not show that the instance
- * actually <em>executed</em> the definition it claims: the recorded version id, the version the node
- * the instance sits on belongs to, and the version the nodes of every task it raised belong to. The
- * real task-17 executors run, so each submission genuinely walks its own graph — Start, Notification
- * and Task nodes and an End node — and stops where that graph says it should.
- *
- * <p>Publishing is modelled here by its effect on the version flags (a new published version becomes
- * current, the previous one stops being current), which is exactly the state the engine resolves
- * against. That the real publish path produces that state, and freezes the graph while doing so, is
- * Property 9's subject.
- *
- * <p><b>Validates: Requirements 9.1</b></p>
- */
 @Tag("flowforge")
 class InstanceBindsPublishedVersionPropertyTest {
 
@@ -191,14 +169,6 @@ class InstanceBindsPublishedVersionPropertyTest {
 
     // ── generators ───────────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Two to four publishes in sequence, each a Start → middles… → End chain of its own shape.
-     *
-     * <p>The middles are the node types task 17 delivers that can sit between the ends: a Notification
-     * node runs through, a Task node stops the instance. So the generated sequences cover instances
-     * that complete immediately, instances that are still waiting when the next version is published,
-     * and mixtures of the two — all of which have to keep their binding.
-     */
     @Provide
     Arbitrary<List<List<NodeType>>> publishSequences() {
         Arbitrary<NodeType> middles = Arbitraries.of(NodeType.NOTIFICATION, NodeType.TASK);

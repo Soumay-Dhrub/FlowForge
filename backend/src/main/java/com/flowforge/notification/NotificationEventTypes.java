@@ -1,13 +1,5 @@
 package com.flowforge.notification;
 
-/**
- * The event type discriminators stored in {@code notifications.event_type}.
- *
- * <p>Kept as constants rather than an enum because the column is a free-form {@code VARCHAR(50)} and
- * per-user email preferences (Requirement 18.2) key off the same strings: a workflow designer can
- * emit a custom event type from a Notification node without a schema change, while the events the
- * platform raises itself stay spelled one way in one place.
- */
 public final class NotificationEventTypes {
 
     /** A task was assigned to the recipient (Requirement 17.1). */

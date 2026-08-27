@@ -40,24 +40,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Property 12: Task Rejection Requires Non-Empty Comment.
- *
- * <p>For any rejection whose comment is absent, empty, or only whitespace, recording the decision must
- * fail with 400 and change nothing — no approval row, no status change, and no advance of the instance.
- * For any rejection with a non-blank comment, and for any approval regardless of comment, it must
- * succeed.</p>
- *
- * <p>Whitespace is generated deliberately, in several shapes — spaces, tabs, newlines, and mixtures —
- * because the obvious wrong implementation is a null-or-{@code isEmpty} check, which accepts {@code " "}
- * and stores a rejection nobody can act on (Requirement 13.2).</p>
- *
- * <p>That nothing is written on refusal is asserted as well as the status code. A 400 returned after the
- * approval row was already saved would still fail the requirement in the way that matters: the reviewer
- * sees an error and the task is silently decided.</p>
- *
- * <p><b>Validates: Requirements 13.2</b></p>
- */
 @Tag("flowforge")
 class RejectionRequiresCommentPropertyTest {
 

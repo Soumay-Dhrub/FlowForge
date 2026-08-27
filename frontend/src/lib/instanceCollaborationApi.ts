@@ -1,11 +1,3 @@
-/**
- * Attachments, comments and delegation — the three things a reviewer does on a request besides
- * deciding it (Requirements 14.1, 15.1, 15.2, 16.1).
- *
- * Grouped in one module because they share an access rule rather than a resource: all three are
- * restricted to participants of the instance, and all three answer 403 to anyone else. Splitting them
- * across three files would spread that one fact thinly.
- */
 import api, { unwrap } from "@/lib/api";
 import type {
   ApiResponse,
@@ -29,17 +21,6 @@ export async function listAttachments(instanceId: string): Promise<Attachment[]>
   );
 }
 
-/**
- * `POST /api/instances/{id}/attachments` — upload one file.
- *
- * The `Content-Type` header is deliberately left unset: the browser has to write it, because only it
- * knows the multipart boundary. Setting `multipart/form-data` by hand omits that boundary and the
- * request is rejected as malformed.
- *
- * The server is the authority on size and type — it counts bytes as it writes and checks the type
- * against its own allow-list — so a client-side check is a courtesy that saves an upload, never the
- * gate.
- */
 export async function uploadAttachment(instanceId: string, file: File): Promise<Attachment> {
   const form = new FormData();
   form.append("file", file);
@@ -73,12 +54,6 @@ export async function listComments(instanceId: string): Promise<Comment[]> {
   return unwrap(await api.get<ApiResponse<Comment[]>>(`/instances/${instanceId}/comments`));
 }
 
-/**
- * `POST /api/instances/{id}/comments` — post a comment, or a reply when `parentId` is given.
- *
- * Replying to a reply, or to a comment on another request, is refused with 400 by the server; the UI
- * only ever offers Reply on a top-level comment, so that should not be reachable from here.
- */
 export async function postComment(
   instanceId: string,
   body: string,
@@ -92,13 +67,6 @@ export async function postComment(
   );
 }
 
-/**
- * A flat thread arranged for rendering: top-level comments in order, each with its replies.
- *
- * The server returns one ordered list precisely so the client can do this without losing position
- * information. A reply whose parent is missing from the list is kept as top-level rather than dropped —
- * silently hiding somebody's comment is worse than showing it slightly out of place.
- */
 export function toThread(comments: Comment[]): Array<Comment & { replies: Comment[] }> {
   const byId = new Map(comments.map((comment) => [comment.id, comment]));
   const roots = comments
@@ -117,13 +85,6 @@ export function toThread(comments: Comment[]): Array<Comment & { replies: Commen
 
 // ── Delegation (Requirement 16.1) ─────────────────────────────────────────────
 
-/**
- * `POST /api/tasks/{id}/delegate` — hand this reviewer's pending work to somebody else for a window.
- *
- * The path names a task but the effect is per-user: every pending task the caller holds moves, and new
- * work routes to the delegate while the window is open. The response says how many changed hands, which
- * is what the UI reports back — "delegated" without a count leaves the reviewer guessing.
- */
 export async function delegateTasks(
   taskId: string,
   delegateId: string,

@@ -1,17 +1,6 @@
-/**
- * Token persistence for the browser session.
- *
- * SECURITY TRADEOFF (deliberate, documented):
- * Tokens are kept in `localStorage`. That makes them readable by any script running on the
- * origin, so a successful XSS gives an attacker the refresh token (30 day lifetime) as well as
- * the access token. The strictly safer arrangement is an httpOnly + SameSite cookie for the
- * refresh token and an in-memory access token, but `POST /api/auth/login` returns both tokens in
- * the JSON body and never sets a cookie, so that option needs a backend change first.
- * In-memory-only storage was rejected because it logs the user out on every page reload.
- *
- * Everything token-related goes through this module, so migrating to cookies later means
- * rewriting this file and nothing else.
- */
+// Tokens live in localStorage, so an XSS gets the refresh token too. An httpOnly cookie would be
+// safer, but login returns both tokens in the JSON body and never sets one, so that needs a backend
+// change first. All token access goes through this module.
 import type { TokenPair } from "@/types";
 
 const ACCESS_TOKEN_KEY = "flowforge.accessToken";

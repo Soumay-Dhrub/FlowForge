@@ -6,9 +6,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Repository for WorkflowEdge entity operations.
- */
 @Repository
 public interface WorkflowEdgeRepository extends JpaRepository<WorkflowEdge, UUID> {
 

@@ -56,19 +56,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * A real {@link WorkflowEngineService} wired to in-memory repositories.
- *
- * <p>Same approach as {@code InMemoryWorkflowFixture}: the repositories are Mockito mocks backed by
- * maps, so a write is visible to the next read and the production logic — version resolution, the
- * advance loop, audit emission — actually runs. Ids are assigned on save only when absent, mirroring
- * {@code @GeneratedValue}.</p>
- *
- * <p>Executors are registered per test through {@link #registerExecutor}, which is what lets the
- * engine be tested before tasks 17 and 18 supply the real ones. Every save is also appended to
- * {@link #savedPositions}, so a test can prove the engine persisted each node it visited rather than
- * only the last one.</p>
- */
 final class InMemoryEngineFixture {
 
     final Map<UUID, Workflow> workflowsById = new LinkedHashMap<>();
@@ -109,11 +96,6 @@ final class InMemoryEngineFixture {
 
     /** Delegation routing, over the same in-memory delegations a test declares. */
     final DelegationRouter delegationRouter = new DelegationRouter(delegationRepository);
-    /**
-     * Notifications recorded in memory, with email dispatch wired to a recording sender so the engine
-     * tests exercise the same code path production does without reaching SMTP. No preference rows
-     * exist here, so the catalog defaults decide.
-     */
     final RecordingEmailSender emailSender = new RecordingEmailSender();
     final NotificationPreferenceRepository preferenceRepository =
             mock(NotificationPreferenceRepository.class);

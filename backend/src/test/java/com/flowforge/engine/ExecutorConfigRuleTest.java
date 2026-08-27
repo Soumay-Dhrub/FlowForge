@@ -1,7 +1,6 @@
 package com.flowforge.engine;
 
 import com.flowforge.engine.executors.ApprovalNodeExecutor;
-import com.flowforge.engine.executors.ConditionNodeExecutor;
 import com.flowforge.engine.executors.NotificationNodeExecutor;
 import com.flowforge.engine.executors.TaskNodeExecutor;
 import com.flowforge.workflow.NodeConfigRule;
@@ -19,16 +18,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The config rules the executors declare about themselves (Requirement 7.5).
- *
- * <p>Each executor is both the thing that reads a config key and the thing that declares it required,
- * which is what stops validation drifting from execution. These tests hold that pairing to account: for
- * every key an executor refuses to run without, publishing must refuse the graph.
- *
- * <p>Whether {@code WorkflowVersionService} applies the rules is {@code NodeConfigValidationTest}'s
- * subject; this is about what the rules say.
- */
 class ExecutorConfigRuleTest {
 
     private InMemoryEngineFixture fixture;

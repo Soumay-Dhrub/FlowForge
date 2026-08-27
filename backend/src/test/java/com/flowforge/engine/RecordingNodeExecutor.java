@@ -7,14 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-/**
- * A stand-in executor for the engine tests: records every node it was handed and applies whatever
- * behaviour the test gave it.
- *
- * <p>The real executors arrive in tasks 17 and 18. What task 16 has to prove is dispatch and the
- * transaction-scoped advance loop, and for that a stub that can pause, move or terminate on demand
- * is the whole of the contract the engine relies on.</p>
- */
 final class RecordingNodeExecutor implements NodeExecutor {
 
     private final NodeType type;

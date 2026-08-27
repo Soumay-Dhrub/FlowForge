@@ -1,17 +1,5 @@
 "use client";
 
-/**
- * Approve or reject a task (Requirements 13.1, 13.2).
- *
- * The "a rejection needs a comment" rule is enforced here *and* honoured when the server enforces it:
- * checking it client-side means the reviewer is told before a round trip, but the 400 is still handled,
- * because whitespace rules, a stale form, or a direct call are all reasons the server may be the one to
- * refuse. The server remains the authority — this is a courtesy, not the gate.
- *
- * Errors are placed where the reviewer can act on them: a missing comment lands on the comment field,
- * while "not yours" (403) and "already decided" (409) are facts about the task rather than the form, so
- * they surface at form level with the server's own wording.
- */
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";

@@ -1,15 +1,3 @@
-/**
- * The builder's graph model: the translation layer between a stored workflow version and the canvas.
- *
- * Everything here is pure, and deliberately so. The awkward part of a workflow builder is not drawing
- * boxes, it is that **node identifiers are not stable across a save**: the ids the canvas mints are
- * payload-local correlation keys that the server throws away, so the state after a save has to be
- * rebuilt from the response. Keeping that translation in plain functions means it can be tested
- * without a canvas, and it is the part most likely to be wrong.
- *
- * React Flow types are imported for their shape only, so this module carries no runtime dependency on
- * the canvas library.
- */
 import type { Edge, Node } from "@xyflow/react";
 import type { SaveDraftInput } from "@/lib/workflowsApi";
 import type { NodeType, WorkflowVersion } from "@/types";
@@ -17,12 +5,6 @@ import type { NodeType, WorkflowVersion } from "@/types";
 /** The single custom node renderer; every FlowForge node is drawn by it, keyed by its own type. */
 export const BUILDER_NODE_TYPE = "flowforgeNode";
 
-/**
- * What a canvas node carries.
- *
- * A type alias rather than an interface on purpose: React Flow's `Node` requires its data to satisfy
- * `Record<string, unknown>`, and only type aliases get the implicit index signature that allows that.
- */
 export type BuilderNodeData = {
   /** The FlowForge node type. Named `nodeType` because `type` on a React Flow node is the renderer. */
   nodeType: NodeType;
@@ -51,12 +33,6 @@ export interface PaletteEntry {
   description: string;
 }
 
-/**
- * Every node type the engine can execute, in the order a designer builds a graph.
- *
- * `AND_JOIN` is included because the engine executes it and a parallel workflow cannot be joined
- * without it (Requirement 10.2) — omitting it would make a whole class of workflow undrawable.
- */
 export const NODE_PALETTE: readonly PaletteEntry[] = [
   { type: "START", label: "Start", description: "Entry point. Exactly one is required." },
   { type: "TASK", label: "Task", description: "Work assigned to a user or role." },
@@ -95,13 +71,6 @@ export function allowsOutgoing(type: NodeType): boolean {
   return type !== "END";
 }
 
-/**
- * A fresh identifier for a canvas element.
- *
- * It must be a UUID: the draft-save DTO types node ids as `UUID`, so anything else is a 400 before
- * the graph is even looked at. `crypto.randomUUID` is used when present, with a v4 fallback built
- * from `getRandomValues` for the environments (older jsdom among them) that lack it.
- */
 export function newElementId(): string {
   const webCrypto = globalThis.crypto;
   if (webCrypto && typeof webCrypto.randomUUID === "function") {
@@ -159,16 +128,6 @@ export function createBuilderEdge(
   };
 }
 
-/**
- * Build canvas state from a stored version.
- *
- * This is also the re-seeding path used after every save: the response's node ids are the ones the
- * next save must send, so adopting the response wholesale is what keeps a second save from being
- * rejected for naming nodes that no longer exist.
- *
- * A node with no stored position lands on the origin rather than being dropped; a version saved by
- * this editor always carries positions, but a graph copied by the backend's clone path may not.
- */
 export function builderGraphFromVersion(version: WorkflowVersion): BuilderGraph {
   const nodes = (version.nodes ?? []).map<BuilderNode>((node) => ({
     id: node.id,
@@ -192,14 +151,6 @@ export function builderGraphFromVersion(version: WorkflowVersion): BuilderGraph 
   return { nodes, edges };
 }
 
-/**
- * Serialise canvas state into a draft-save payload.
- *
- * Order is preserved because the engine evaluates a Condition node's outgoing edges in the order they
- * were authored, and the backend stores the payload order verbatim.
- *
- * Positions are rounded: the column is an integer, and half a pixel is not information.
- */
 export function toSaveDraftPayload(graph: BuilderGraph): SaveDraftInput {
   return {
     nodes: graph.nodes.map((node) => ({
@@ -219,15 +170,6 @@ export function toSaveDraftPayload(graph: BuilderGraph): SaveDraftInput {
   };
 }
 
-/**
- * Translate a node id from before a save into the id the server assigned it.
- *
- * The backend writes the payload's nodes in order and reports them in that same order, so position
- * in the list is the correlation. Used to keep the selected node selected across a save instead of
- * silently clearing the properties panel.
- *
- * @returns the new id, or null when there is nothing to carry over
- */
 export function remapNodeId(
   previous: readonly BuilderNode[],
   saved: readonly BuilderNode[],
@@ -246,13 +188,6 @@ export function remapNodeId(
 /** Matches the node id the backend embeds in a publish violation, e.g. "Node <uuid> (APPROVAL) …". */
 const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
-/**
- * The node a publish violation is about, when it names one.
- *
- * The backend's messages are already precise ("Node <id> (APPROVAL) configures no approver…"), so the
- * id is pulled out to label the violation with the node type a designer sees on the canvas. Rules
- * about the graph as a whole — "exactly one Start node" — name nothing, and get no label.
- */
 export function violationNodeId(violation: string): string | null {
   return violation.match(UUID_PATTERN)?.[0] ?? null;
 }

@@ -195,13 +195,6 @@ class UserServiceTest {
                 .isInstanceOf(EntityNotFoundException.class);
     }
 
-    /**
-     * Revoking tokens is a bulk update that clears the persistence context, detaching the user — so
-     * the response has to be mapped before it runs. Against a real database, mapping afterwards
-     * fails on the user's lazy department with a LazyInitializationException and the endpoint answers
-     * 500 instead of 200. Mocked repositories cannot reproduce a detached proxy, so the ordering
-     * itself is what is pinned here.
-     */
     @Test
     void setAccountStatus_mapsTheResponseBeforeRevokingTokens() {
         UserMapper mapper = spy(new UserMapperImpl());

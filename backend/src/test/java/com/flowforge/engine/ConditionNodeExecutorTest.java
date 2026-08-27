@@ -18,23 +18,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Unit tests for {@code ConditionNodeExecutor}: routing on request data, and what happens when it
- * cannot be done (Requirements 9.4, 9.5).
- *
- * <p>The graph is Start → Condition → one Task node per branch. A Task node pauses, so where the
- * instance is sitting afterwards is the branch it took, and an instance that could not be routed is
- * unmistakably different: ERROR, still on the Condition node.
- */
 class ConditionNodeExecutorTest {
 
-    /**
-     * Proof of whether a sandboxed expression ran or was refused.
-     *
-     * <p>Asserting that a malicious expression throws is not on its own proof that it did not execute —
-     * it could have run and then failed. A static method the expression tries to call, that records
-     * being called, distinguishes the two.
-     */
     public static final class Probe {
 
         private static boolean tripped;
@@ -231,11 +216,6 @@ class ConditionNodeExecutorTest {
 
     // ── the sandbox ──────────────────────────────────────────────────────────────────────────────
 
-    /**
-     * A condition expression is configuration, not code. Each of these is a real SpEL escape under a
-     * {@code StandardEvaluationContext}; all of them must be refused, and the probe proves refused
-     * rather than executed-then-failed.
-     */
     @Test
     void execute_refusesExpressionsThatReachTypesBeansOrConstructors() {
         String[] malicious = {

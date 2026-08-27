@@ -31,13 +31,6 @@ export interface TokenPair {
   expiresIn: number;
 }
 
-/**
- * Mirrors the backend `NotificationResponse` returned by `GET /api/notifications`.
- *
- * `eventType` is a plain string rather than a union: the column is a free-form `VARCHAR(50)` and a
- * workflow's Notification node may emit a designer-defined type, so the UI must render one it has
- * never seen. {@link NOTIFICATION_EVENT_LABELS} maps the ones the platform raises itself.
- */
 export interface Notification {
   id: string;
   eventType: string;
@@ -60,12 +53,6 @@ export interface DepartmentOption {
 
 export type WorkflowStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
 
-/**
- * Mirrors the backend `WorkflowResponse`.
- *
- * `versions` is `null` on list responses and populated only by `GET /api/workflows/{id}`, so the
- * version history is not loaded for every row of the workflow table (Requirement 8.3).
- */
 export interface Workflow {
   id: string;
   name: string;
@@ -78,12 +65,6 @@ export interface Workflow {
   versions: WorkflowVersion[] | null;
 }
 
-/**
- * Mirrors the backend `NodeType` enum, including `AND_JOIN`.
- *
- * The synchronisation node is part of the set the engine executes and the builder must be able to
- * place it: without it a parallel workflow can be drawn but never joined (Requirement 10.2).
- */
 export type NodeType =
   | "START"
   | "TASK"
@@ -129,28 +110,10 @@ export interface WorkflowEdge {
   conditionExpr: string | null;
 }
 
-/**
- * Mirrors the backend `TaskStatus` enum.
- *
- * Only `PENDING` and `ESCALATED` can still be decided — the service answers 409 for anything else —
- * so this union is what the detail page reads to decide between a form and a read-only record.
- */
 export type TaskStatus = "PENDING" | "COMPLETED" | "DELEGATED" | "ESCALATED" | "CANCELLED";
 
-/**
- * Mirrors the backend `Decision` enum.
- *
- * Deliberately has no "undecided" member: a task with no decision carries `null`, which keeps a
- * pending task distinguishable from an abstention.
- */
 export type Decision = "APPROVED" | "REJECTED";
 
-/**
- * Mirrors the backend `TaskResponse`.
- *
- * Flattened the same way the API flattens it: the workflow's name and the node's label travel with
- * the task so a queue can be read without a request per row.
- */
 export interface Task {
   id: string;
   instanceId: string;
@@ -171,13 +134,6 @@ export interface Task {
 /** Mirrors the backend `InstanceStatus` enum. */
 export type InstanceStatus = "RUNNING" | "COMPLETED" | "REJECTED" | "ERROR" | "CANCELLED";
 
-/**
- * Mirrors the backend `WorkflowInstanceResponse`.
- *
- * `requestData` is the submitted payload and an open map — the shape is whatever the requester sent,
- * so consumers must render it generically rather than expect particular keys. It is populated only by
- * `GET /api/instances/{id}`; list responses carry `null`.
- */
 export interface WorkflowInstance {
   id: string;
   workflowId: string;
@@ -193,16 +149,6 @@ export interface WorkflowInstance {
   completedAt: string | null;
 }
 
-/**
- * Mirrors the backend `AuditEventResponse` — one entry of the dashboard activity feed
- * (Requirement 20.3).
- *
- * Deliberately narrower than {@link AuditLogEntry}: the feed carries no before/after state, because
- * those diffs can hold any field of any entity and reading them is an ADMIN-only affair.
- *
- * `actorId` is nullable. The audit table's FK is `ON DELETE SET NULL`, so an entry outlives the
- * account that caused it — a deleted actor leaves a null rather than removing the record.
- */
 export interface AuditEvent {
   id: string;
   actorId: string | null;
@@ -212,13 +158,6 @@ export interface AuditEvent {
   createdAt: string;
 }
 
-/**
- * Mirrors the backend `DashboardResponse` from `GET /api/reports/dashboard`
- * (Requirements 20.1, 20.2, 20.3).
- *
- * Every field is scoped to the calling user; the endpoint takes no user parameter at all.
- * `submittedInstances` are list-shaped, so their `requestData` is always `null`.
- */
 export interface Dashboard {
   pendingTaskCount: number;
   pendingTasks: Task[];
@@ -226,13 +165,6 @@ export interface Dashboard {
   recentActivity: AuditEvent[];
 }
 
-/**
- * Mirrors the backend `PerformanceFilter` echoed back inside a performance report, so a saved or
- * exported report is self-describing.
- *
- * The instants are resolved from the calendar dates the caller sent: `submittedTo` is the *last*
- * instant of the named day, not its midnight.
- */
 export interface PerformanceFilters {
   departmentId: string | null;
   workflowId: string | null;
@@ -241,12 +173,6 @@ export interface PerformanceFilters {
   minBottleneckSamples: number;
 }
 
-/**
- * Mirrors the backend `NodePerformance` — how long one stage holds work (Requirements 21.1, 21.2).
- *
- * Only nodes with at least one *decided* task are reported, so `averageDwellSeconds` is populated
- * here in practice; it stays nullable to match the wire type rather than to be coerced.
- */
 export interface NodePerformance {
   nodeId: string;
   nodeType: NodeType;
@@ -256,18 +182,6 @@ export interface NodePerformance {
   bottleneck: boolean;
 }
 
-/**
- * Mirrors the backend `WorkflowPerformanceResponse` from
- * `GET /api/reports/workflow/{id}/performance` (Requirements 21.1–21.4).
- *
- * `averageApprovalTimeSeconds` and `rejectionRate` are **`null` when nothing qualified**, and that
- * null is load-bearing: an average over an empty set is undefined, so rendering it as `0` would
- * claim instantaneous approvals and a spotless rejection record for data that does not exist. The
- * counts stay at `0`, because zero is the true count.
- *
- * `bottleneckNode` is `null` when no node reached `bottleneckMinimumSamples` — a stage named on a
- * single observation is an anecdote, not a constraint.
- */
 export interface WorkflowPerformance {
   workflowId: string;
   workflowName: string;
@@ -286,17 +200,6 @@ export interface WorkflowPerformance {
   bottleneckMinimumSamples: number;
 }
 
-/**
- * Mirrors the backend `AuditLogResponse` from `GET /api/audit-logs` (Requirement 19.3). ADMIN only.
- *
- * The full entry, both states included — an audit search whose results omit what changed answers
- * "something happened" and leaves the reader to open every row. `beforeState` is `null` for a create
- * and `afterState` is `null` for a delete, and both are open maps: the diff carries whatever fields
- * the audited entity has.
- *
- * `actorId` is nullable and that is not an anomaly: the FK is `ON DELETE SET NULL`, so the trail
- * outlives the accounts it describes.
- */
 export interface AuditLogEntry {
   id: string;
   actorId: string | null;
@@ -308,12 +211,6 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
-/**
- * Mirrors the backend `AuditLogPage`.
- *
- * Note the field names: `entries` and `totalCount`, not Spring Data's `content`/`totalElements` —
- * the endpoint returns its own record rather than a serialised `Page`.
- */
 export interface AuditLogSearchPage {
   entries: AuditLogEntry[];
   totalCount: number;
@@ -321,12 +218,6 @@ export interface AuditLogSearchPage {
   size: number;
 }
 
-/**
- * Mirrors the backend `AttachmentResponse` (Requirement 14.1).
- *
- * Metadata only. The bytes are never sent inline: a request's attachments can be tens of megabytes and
- * a list view has no use for them.
- */
 export interface Attachment {
   id: string;
   instanceId: string;
@@ -337,12 +228,6 @@ export interface Attachment {
   createdAt: string;
 }
 
-/**
- * Mirrors the backend `CommentResponse` (Requirements 15.1, 15.2).
- *
- * `parentId` is null on a top-level comment and set on a reply. The list arrives flat in written order
- * with each reply naming its parent, so nesting is the client's to render — see `toThread`.
- */
 export interface Comment {
   id: string;
   instanceId: string;
@@ -353,13 +238,6 @@ export interface Comment {
   createdAt: string;
 }
 
-/**
- * Mirrors the backend `DelegationResponse` (Requirement 16.1).
- *
- * `active` is the stored flag; `inEffectNow` additionally accounts for the window, so a delegation
- * saved for next week is active but not yet in effect. `reassignedTaskIds` names the pending tasks that
- * changed hands when it was created.
- */
 export interface Delegation {
   id: string;
   delegatorId: string;

@@ -1,10 +1,3 @@
-/**
- * Handing a fetched payload to the browser as a file.
- *
- * The export endpoints are authenticated, so a plain `<a href>` or `window.open` would issue a
- * request with no `Authorization` header and be answered 401. The bytes therefore come back through
- * the shared Axios instance as a blob, and this turns that blob into a download.
- */
 
 /** Streams an already-fetched blob to disk under `filename`. */
 export function triggerBrowserDownload(blob: Blob, filename: string): void {

@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * The user table (Requirements 1.1, 4.1, 4.3). ADMIN only.
- *
- * Access is checked twice, on purpose. The caller's own role short-circuits the page so a MANAGER who
- * types `/users` gets a plain "not authorized" panel instead of a table that fails; and a 403 from
- * the API lands on the same panel, which covers the case where the client's idea of the role is
- * stale or wrong. Neither is the security boundary — the endpoint is (Requirement 3.2) — they just
- * make the refusal legible.
- */
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -31,12 +22,6 @@ const ADMIN_ONLY_MESSAGE = "Only administrators can manage users.";
 
 const COLUMNS = ["Name", "Email", "Role", "Department", "Status", "Created", "Actions"] as const;
 
-/**
- * Role reads as a tone, not a colour.
- *
- * ADMIN is accented because it is the row you want your eye to land on when scanning for who can change
- * the system; everyone else is deliberately quiet so that signal is not diluted.
- */
 const ROLE_TONES = {
   ADMIN: "accent",
   MANAGER: "info",

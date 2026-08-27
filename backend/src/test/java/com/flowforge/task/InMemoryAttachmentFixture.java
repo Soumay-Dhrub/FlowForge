@@ -31,18 +31,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * A real {@link AttachmentService} on map-backed repositories and a throwaway storage directory.
- *
- * <p>Same approach as {@code InMemoryEngineFixture}: the repositories are Mockito mocks over maps, so
- * the production logic — the participant rule, the type gate, the streaming size cap, the audit write —
- * actually runs. The storage root is a real temporary directory, because the behaviour under test
- * includes what does and does not appear on disk, and a mocked filesystem would agree with whatever the
- * code did.
- *
- * <p>Closing the fixture deletes the directory, so a property with 100 tries does not leave 100 trees
- * behind.
- */
 final class InMemoryAttachmentFixture implements AutoCloseable {
 
     /** The default limit these tests work against: small enough to exceed cheaply. */

@@ -1,12 +1,5 @@
 "use client";
 
-/**
- * The page-level "you cannot see this" state.
- *
- * Shown when the caller's role has no access to a page, whether that was known up front from their
- * profile or learned from a 403. It is a plain explanation with a way out, not an error: hiding the
- * navigation link is not protection, and a raw 403 body is not an answer.
- */
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 

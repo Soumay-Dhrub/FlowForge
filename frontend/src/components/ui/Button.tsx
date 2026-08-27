@@ -1,18 +1,5 @@
 "use client";
 
-/**
- * The one button.
- *
- * Every page had grown its own `className` string for the same three or four kinds of button, which is
- * how a product ends up with four slightly different greys and two different heights. Variants are
- * named for intent — what the button means — rather than for colour, so a destructive action cannot
- * accidentally be styled as a neutral one.
- *
- * `disabled` is never used to mean "busy": a disabled button loses its accessible name for some screen
- * readers and cannot be focused, so a form that disables its submit button while saving strands the
- * keyboard user who pressed it. `loading` keeps the button focusable, sets `aria-busy`, and blocks the
- * click instead.
- */
 import { forwardRef } from "react";
 import { Loader2, type LucideIcon } from "lucide-react";
 

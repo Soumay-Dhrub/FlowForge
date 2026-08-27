@@ -1,15 +1,5 @@
 "use client";
 
-/**
- * The conversation on a request (Requirements 15.1, 15.2, 15.3).
- *
- * The server returns the thread flat, in written order, with each reply naming its parent. Nesting is
- * assembled here rather than server-side so no position information is lost at the API boundary — see
- * `toThread`, which also keeps a reply whose parent is missing as top-level instead of dropping it.
- *
- * Reply is offered only on top-level comments, matching the server's one-level rule. Rendering a Reply
- * button that always produced a 400 would be a worse form of the same limit.
- */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MessageSquare } from "lucide-react";

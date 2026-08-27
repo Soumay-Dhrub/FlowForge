@@ -18,35 +18,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Property 14: Audit Log Completeness.
- *
- * <p><i>For any create, update, approve, reject, or delete operation performed on any entity, exactly one
- * Audit_Log entry SHALL be written containing the correct actor, action type, entity type, entity ID, and
- * timestamp.</i>
- *
- * <p><b>Validates: Requirements 19.1</b>
- *
- * <h2>Why "exactly one" is the hard part</h2>
- * <p>Coverage on its own would be easy: log in the aspect and log in the service and every operation is
- * certainly logged. It would also be wrong. Two rows for one approval means a reviewer counting approvals
- * gets twice the answer, and there is no way to tell from the trail which of the two pairs was a duplicate
- * and which was a repeat action. So the property is generated over both dimensions at once — the five verbs,
- * and whether the operation records its own entry — and asserts the count as strictly as it asserts the
- * content.
- *
- * <h2>The oracle</h2>
- * <p>Independent of the aspect. The expected entry for each generated operation is built from literal
- * constants and the operation's own generated entity id, not by asking the aspect what it would derive: the
- * action names below are spelled out rather than composed with the aspect's own naming helper, so a change
- * to that helper fails this test instead of moving with it.
- *
- * <h2>What this property does not claim</h2>
- * <p>It measures operations that pass through the proxy. Spring AOP cannot intercept self-invocation, so an
- * internal call is invisible to the aspect — which is precisely why the production services also record
- * explicitly, and why the generated "records its own entry" case is half of this property rather than an
- * afterthought.
- */
 @Tag("flowforge")
 class AuditLogCompletenessPropertyTest {
 
@@ -55,13 +26,6 @@ class AuditLogCompletenessPropertyTest {
         CREATE, UPDATE, DELETE, APPROVE, REJECT
     }
 
-    /**
-     * One generated operation.
-     *
-     * @param verb            which kind of write
-     * @param entityId        the entity it acts on, generated so the oracle knows it in advance
-     * @param auditsItself    whether the service records its own entry, making the aspect stand down
-     */
     private record Operation(Verb verb, UUID entityId, boolean auditsItself) {
 
         /**
@@ -134,11 +98,6 @@ class AuditLogCompletenessPropertyTest {
                         .count()));
     }
 
-    /**
-     * Operations that do not audit themselves still must not be double-logged when several act on the same
-     * entity in one transaction — the aspect's suppression is per invocation, not per entity, and a
-     * per-entity rule would silently drop the second of two legitimate changes.
-     */
     @Property(tries = 100)
     @Label("Property 14: repeated writes to one entity each get their own entry")
     void repeatedWritesToOneEntityAreEachRecorded(

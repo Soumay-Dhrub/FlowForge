@@ -23,26 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * User management endpoints.
- *
- * <p>Authorization follows the RBAC table in the design document (Requirements 3.1, 3.2, 3.4):</p>
- * <ul>
- *   <li>{@code GET/POST /api/users} — ADMIN</li>
- *   <li>{@code GET/PATCH /api/users/{id}} — ADMIN, or the user themselves for their own record</li>
- *   <li>{@code PATCH /api/users/{id}/status} — ADMIN</li>
- *   <li>{@code GET /api/users/me} — any authenticated user</li>
- * </ul>
- *
- * <p>Two notes on the expressions below. First, {@code JwtAuthenticationFilter} sets the principal
- * to the caller's UUID, so {@code authentication.name} is that UUID's string form — that is what
- * the self-access checks compare against. Second, a self PATCH additionally requires
- * {@code roleId == null}: without that clause any user could grant themselves the ADMIN role
- * through their own profile endpoint.</p>
- *
- * <p>Requests with no, expired, or malformed token never reach these methods — the security filter
- * chain rejects them with 401 (Requirement 3.3).</p>
- */
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor

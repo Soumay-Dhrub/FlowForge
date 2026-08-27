@@ -28,14 +28,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * HTTP-level behaviour of {@link NotificationController} (Requirements 18.1, 18.3).
- *
- * <p>Driven through a standalone {@code MockMvc} wired to the real {@link NotificationInboxService}
- * and {@link GlobalExceptionHandler}, so the assertions are about actual status codes and response
- * bodies rather than exception types. {@code @PreAuthorize} is covered by the filter-chain and RBAC
- * tests; what matters here is that the endpoints scope to the authenticated principal.
- */
 class NotificationControllerTest {
 
     private final Map<UUID, Notification> notificationsById = new LinkedHashMap<>();

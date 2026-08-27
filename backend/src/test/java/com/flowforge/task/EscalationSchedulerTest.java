@@ -17,12 +17,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Unit tests for {@link EscalationScheduler} (Requirements 11.1, 11.2).
- *
- * <p>The sweep's own responsibility is narrow — query, delegate, survive failures — so these tests are
- * about exactly that. What escalating a task means is {@link TaskEscalatorTest}'s subject.
- */
 class EscalationSchedulerTest {
 
     private final TaskRepository taskRepository = mock(TaskRepository.class);

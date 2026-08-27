@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * Modal dialog.
- *
- * Unlike {@link ../../lib/usePopover usePopover}, this *does* trap focus, and deliberately so: a
- * dialog makes the page behind it unavailable, so letting Tab wander into content the user cannot
- * act on would strand keyboard and screen-reader users outside the only thing they can interact
- * with. Escape closes, and focus returns to whatever opened the dialog so the user lands back where
- * they were rather than at the top of the document.
- */
 import { useCallback, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 

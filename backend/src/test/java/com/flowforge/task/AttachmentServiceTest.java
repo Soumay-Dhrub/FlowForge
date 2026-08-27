@@ -26,14 +26,6 @@ import static com.flowforge.task.InMemoryAttachmentFixture.upload;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Uploading attachments: the accepted case, and each way an upload is refused
- * (Requirements 14.1, 14.2, 14.3).
- *
- * <p>The size and type rules are covered exhaustively by {@code FileUploadLimitsPropertyTest}. What is
- * here are the specific behaviours a property over sizes and types would not express: where bytes land
- * on disk, that a hostile file name cannot influence that, and who is allowed to upload at all.
- */
 class AttachmentServiceTest {
 
     @Test

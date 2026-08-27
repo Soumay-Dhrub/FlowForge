@@ -4,14 +4,6 @@ import com.flowforge.task.Decision;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/**
- * A reviewer's decision on a task (Requirements 13.1, 13.2).
- *
- * <p>The "a rejection needs a comment" rule is deliberately NOT expressed as a bean-validation
- * annotation. It is a relationship between two fields, and enforcing it in the service lets the 400
- * name {@code comment} as the offending field with an explanation, which is what the reviewer's form
- * needs. A class-level constraint would report the violation against the object instead.
- */
 public record TaskDecisionRequest(
 
         @NotNull(message = "Decision is required")

@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * The top of a page: what this screen is, one line on what it is for, and its primary action.
- *
- * Consistency here does more for perceived quality than any amount of styling. Every page previously
- * chose its own heading size and its own gap before the content, so moving between them felt like
- * moving between products.
- *
- * The description is not decoration. Several of these screens are ambiguous on their name alone —
- * "Tasks" could mean tasks I own or every task in the system — and a sentence answers that far more
- * cheaply than a support conversation.
- */
 export function PageHeader({
   title,
   description,

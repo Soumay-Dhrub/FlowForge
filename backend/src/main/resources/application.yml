@@ -5,12 +5,7 @@ spring:
     password: ${DB_PASSWORD:flowforge}
     driver-class-name: org.postgresql.Driver
   jpa:
-    # Off deliberately. Left on (the default) the session stays open through response
-    # rendering, so a lazy association touched while serialising silently issues a query
-    # outside any transaction — it works, invisibly costs an extra round trip per field,
-    # and hides a missing fetch until some other caller reaches the same entity without a
-    # session and gets LazyInitializationException. Services already map entities to DTOs
-    # inside their @Transactional methods, which is where that work belongs.
+    # Off deliberately: services map to DTOs inside their @Transactional methods.
     open-in-view: false
     hibernate:
       ddl-auto: validate
@@ -24,15 +19,8 @@ spring:
     locations: classpath:db/migration
   servlet:
     multipart:
-      # The container's own upload ceiling, and the first line of defence for Requirement 14.2: Tomcat
-      # stops reading a part past this size, so a hostile 5 GB body never reaches application code.
-      #
-      # Deliberately set *above* app.attachment.max-size-bytes (10 MiB) rather than equal to it. A file
-      # between the two limits reaches AttachmentService, which refuses it with the documented 413 and a
-      # normal ApiResponse envelope naming the limit. Were the container limit the lower of the two, every
-      # oversized upload would be cut off before any of that ran. Anything past the container limit is
-      # still answered 413 — GlobalExceptionHandler maps MaxUploadSizeExceededException — but with a
-      # generic message, because by then there is nothing left to inspect.
+      # Deliberately above app.attachment.max-size-bytes so an oversized file reaches
+      # AttachmentService and gets a 413 naming the limit rather than a truncated stream.
       max-file-size: ${ATTACHMENT_MAX_UPLOAD_SIZE:11MB}
       max-request-size: ${ATTACHMENT_MAX_REQUEST_SIZE:12MB}
   mail:
@@ -44,14 +32,10 @@ spring:
 app:
   bootstrap:
     admin:
-      # Creates the first administrator when the users table is empty, so a fresh install can be
-      # signed into. Every account-creating route needs an existing ADMIN and there is no public
-      # registration, so without this a clean database has no way in. Runs only while no users
-      # exist, and never modifies an installation that has any. See AdminBootstrap.
+      # First admin, created only while the users table is empty. See AdminBootstrap.
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
       email: ${BOOTSTRAP_ADMIN_EMAIL:admin@flowforge.local}
-      # Left empty on purpose: a committed default would be a known credential in every
-      # deployment. When empty a strong random password is generated and logged once at startup.
+      # Empty on purpose: generated and logged at startup instead of shipping a known default.
       password: ${BOOTSTRAP_ADMIN_PASSWORD:}
   jwt:
     secret: ${JWT_SECRET:change-me-in-production-must-be-at-least-256-bits}
@@ -67,26 +51,19 @@ app:
   mail:
     from: ${MAIL_FROM:no-reply@flowforge.local}
   web:
-    # Where notification emails point. They carry identifiers and this link, never request data or
-    # comments, so the reader follows it back into the application where access control applies.
+    # Emails carry identifiers and this link only, never request data.
     base-url: ${WEB_BASE_URL:http://localhost:3000}
   attachment:
-    # Per-file limit of Requirement 14.2. AttachmentStorage counts bytes while writing, so this holds
-    # even when a request understates its Content-Length.
+    # Enforced while writing, so it holds even if a request understates its Content-Length.
     max-size-bytes: ${ATTACHMENT_MAX_SIZE:10485760}
     allowed-types: application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document
-    # Root directory for attachment bytes. Relative paths resolve against the process working
-    # directory, which in the container image is /app — so the default lands on /app/var/attachments.
-    # Deployments that need attachments to survive a container restart mount a volume there and set
-    # ATTACHMENT_STORAGE_PATH to it. Only metadata goes in PostgreSQL; the bytes live here, and
-    # attachments.storage_path stores a path *relative* to this root so the root can move.
+    # Relative to the working directory (/app in the image). storage_path is relative to this root.
     storage-path: ${ATTACHMENT_STORAGE_PATH:./var/attachments}
 
 management:
   endpoints:
     web:
       exposure:
-        # Only the health endpoint is exposed; everything else stays off by default.
         include: health
   endpoint:
     health:
@@ -94,9 +71,7 @@ management:
       probes:
         enabled: true
   health:
-    # The container healthcheck drives depends_on: service_healthy, so it must reflect whether the
-    # application can serve requests. An unreachable SMTP host does not stop it from serving:
-    # mail delivery is a downstream concern, not a liveness signal.
+    # Drives the compose healthcheck, so an unreachable SMTP host must not mark the app unhealthy.
     mail:
       enabled: false
 

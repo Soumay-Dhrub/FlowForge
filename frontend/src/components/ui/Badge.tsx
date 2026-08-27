@@ -1,15 +1,5 @@
 "use client";
 
-/**
- * A status pill.
- *
- * Task status, instance status and decision were each being coloured by a hand-written map in whichever
- * component happened to need them, so the same PENDING appeared amber in one table and grey in another.
- * The mapping lives here now, and the tone names describe meaning rather than hue.
- *
- * The label is always text. Colour alone would exclude anyone who cannot separate the hues — and would
- * also fail in a screenshot pasted into a ticket, which is how most of these get discussed.
- */
 export type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger" | "accent";
 
 const TONES: Record<BadgeTone, string> = {
@@ -39,13 +29,6 @@ export function Badge({
   );
 }
 
-/**
- * How a task status reads.
- *
- * ESCALATED is warning rather than danger: a task that missed its deadline needs attention, but nothing
- * has failed — it has been handed to somebody else, which is the safety net working. CANCELLED is
- * neutral because it is an ending, not a problem.
- */
 export const TASK_STATUS_TONES: Record<string, BadgeTone> = {
   PENDING: "info",
   ESCALATED: "warning",
@@ -54,13 +37,6 @@ export const TASK_STATUS_TONES: Record<string, BadgeTone> = {
   CANCELLED: "neutral",
 };
 
-/**
- * How an instance status reads.
- *
- * REJECTED is warning, not danger: a rejected request is a legitimate outcome of a working process. ERROR
- * is the danger case, because it means the engine could not route the request at all and somebody has to
- * look at the definition.
- */
 export const INSTANCE_STATUS_TONES: Record<string, BadgeTone> = {
   RUNNING: "info",
   COMPLETED: "success",

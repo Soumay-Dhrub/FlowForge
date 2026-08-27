@@ -29,14 +29,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * The personal dashboard (Requirements 20.1, 20.2, 20.3).
- *
- * <p>{@link TaskService} and {@link WorkflowInstanceService} are stubbed: they already own — and are
- * already tested on — what a task and a request look like. What is under test here is the dashboard's
- * own three decisions: which tasks count as awaiting the caller, that the count agrees with the list,
- * and how the activity feed is assembled and capped.
- */
 class ReportServiceDashboardTest {
 
     private static final Instant BASE = Instant.parse("2024-06-01T09:00:00Z");

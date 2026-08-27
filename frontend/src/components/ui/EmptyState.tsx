@@ -1,13 +1,5 @@
 "use client";
 
-/**
- * What a list shows when it has nothing to show.
- *
- * Two different situations were being collapsed into one grey sentence: "you have no tasks", which is
- * good news and needs no action, and "nothing matches these filters", which means the filters are hiding
- * something and offering to clear them is the useful response. Telling them apart is the whole point of
- * this component, so `filtered` is a required decision rather than an optional flag.
- */
 import { Inbox, SearchX, type LucideIcon } from "lucide-react";
 
 export function EmptyState({

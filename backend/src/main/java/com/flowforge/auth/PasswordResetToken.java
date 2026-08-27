@@ -8,13 +8,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Persisted password reset token (Requirement 5.1–5.4).
- *
- * <p>Maps to the {@code password_reset_tokens} table created in {@code V1__initial_schema.sql}.
- * A record is created when a reset is requested and flipped to {@code used} inside the same
- * transaction that changes the password, which makes reset tokens strictly single-use.</p>
- */
 @Entity
 @Table(name = "password_reset_tokens")
 @Getter

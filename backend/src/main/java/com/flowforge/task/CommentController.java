@@ -19,14 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Comment endpoints on a request (Requirements 15.1, 15.2, 15.3).
- *
- * <h2>Authorization</h2>
- * <p>As with attachments, the annotation only establishes that somebody is logged in; what decides access
- * is participation in the request, which {@link CommentService} checks through {@link InstanceParticipants}
- * on both the read and the write path. A non-participant gets 403 whatever their role.
- */
 @RestController
 @RequestMapping("/api/instances/{instanceId}/comments")
 @RequiredArgsConstructor
@@ -34,12 +26,6 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    /**
-     * Post a comment, or a reply to one (Requirement 15.1).
-     *
-     * <p>A blank body is 400; a non-participant is 403. A {@code parentId} naming a comment on another
-     * request, or one that is already a reply, is 400 — see {@link CommentService}.
-     */
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<CommentResponse>> addComment(

@@ -31,21 +31,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
-/**
- * Property 6: Deactivation Immediately Blocks Access.
- *
- * <p>For any active user who is subsequently deactivated, requests carrying that user's access
- * token no longer authenticate (which Spring Security answers with 401), and the user's refresh
- * tokens and credentials are rejected with 401 — until the account is reactivated, at which point
- * a fresh login succeeds again.</p>
- *
- * <p>The real {@link JwtAuthenticationFilter}, {@link AuthService} and {@link UserService} run
- * against in-memory repositories, so deactivation propagates through the same
- * {@code findByIdAndIsActiveTrue} lookup the running application uses. A null authentication after
- * the filter is the state that yields 401 for a protected endpoint.</p>
- *
- * <p><b>Validates: Requirements 4.1, 4.2, 4.3</b></p>
- */
 @Tag("flowforge")
 class DeactivationBlocksAccessPropertyTest {
 

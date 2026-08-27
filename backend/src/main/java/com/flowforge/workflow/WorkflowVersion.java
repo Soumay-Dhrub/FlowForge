@@ -15,19 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * A single version of a {@link Workflow} definition.
- *
- * <p>While unpublished the version is a mutable draft: the editable graph lives in the
- * {@link #nodes} and {@link #edges} collections and draft saves do not create a new version
- * (Requirements 6.4, 6.5). Publishing freezes the graph into {@link #graphJson}, stamps
- * {@link #publishedAt}/{@link #publishedBy} and flags the version as current, leaving all prior
- * versions untouched so running instances keep their original definition
- * (Requirements 7.6, 7.7, 8.3).
- *
- * <p>{@code graphJson} preserves the authored order of nodes and edges, which is what the
- * execution engine relies on when evaluating a Condition node's outgoing edges in order.
- */
 @Entity
 @Table(name = "workflow_versions")
 @Getter

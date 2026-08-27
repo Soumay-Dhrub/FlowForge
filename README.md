@@ -30,19 +30,10 @@ run a part of the stack directly.
 - **pnpm** — no separate install needed; `corepack pnpm ...` uses the exact version pinned in
   `frontend/package.json`. `npm install -g pnpm` also works.
 
-### A note on the JDK version
-
-The backend compiles to Java 21 bytecode (`<release>21</release>`) but **builds and tests on any JDK
-from 21 upward**, so you do not need to match a specific version or configure anything.
-
-If you want the build to run on a real JDK 21 for exact parity with CI and the runtime image, opt in:
-
-```bash
-mvn -Pjdk21-toolchain verify
-```
-
-That profile requires a `~/.m2/toolchains.xml` entry pointing at a JDK 21 (the profile comment in
-`backend/pom.xml` shows the snippet). It is opt-in precisely so that a fresh clone never needs it.
+The backend compiles to Java 21 bytecode but builds and tests on any JDK from 21 upward, so there is
+nothing to configure. For exact parity with CI and the runtime image, `mvn -Pjdk21-toolchain verify`
+runs the build on a real JDK 21; that profile needs a `~/.m2/toolchains.xml` entry, which is why it is
+opt-in rather than automatic.
 
 ---
 
@@ -309,10 +300,9 @@ FlowForge/
 
 ### Images and tags
 
-CI builds both images on every push and tags them with the commit SHA. On `main` it also tags
-`latest`. The SHA tag is the one that matters: it is the only tag that identifies exactly what is
-running, so given a container you can always get back to the commit it came from. `latest` exists so a
-deployment can follow the branch, never as an image's only tag.
+CI builds both images on every push, tagged with the commit SHA, plus `latest` on `main`. The SHA tag
+is the one that matters: it identifies exactly what is running, so a container can always be traced
+back to its commit.
 
 ```bash
 docker build -t flowforge-backend:$(git rev-parse HEAD) ./backend
@@ -346,14 +336,12 @@ Everything else has a working default; these do not, or their defaults are unsaf
 
 ### Attachment storage needs a volume
 
-Attachment bytes live on disk, and their metadata lives in Postgres. Mounting a volume at the storage
-path is not optional: without one the files sit in the container's writable layer and a redeploy
-discards every attachment while its `attachments` row survives, leaving metadata pointing at nothing.
-`docker-compose.yml` mounts a named `attachment_data` volume for this.
+Attachment bytes live on disk and only their metadata is in Postgres, so a volume at the storage path
+is not optional: without one a redeploy discards every attachment while its `attachments` row
+survives. `docker-compose.yml` mounts a named `attachment_data` volume for this.
 
-The image creates the directory owned by the non-root `spring` user before switching to it. A bind
-mount from the host must be writable by uid 101, or uploads fail with "Attachment storage is not
-writable".
+A host bind mount must be writable by uid 101, the non-root `spring` user the image runs as, or
+uploads fail with "Attachment storage is not writable".
 
 ### First run and migrations
 
@@ -387,15 +375,11 @@ re-enables the bootstrap on next start, which is the intended recovery path for 
 | `GET /actuator/health` | Liveness and readiness. Backs the compose healthcheck and `depends_on: service_healthy`. |
 | `GET http://localhost:3000` | Frontend. Probe over IPv4 (`127.0.0.1`), not `localhost` — busybox resolves IPv6 first and the Next server binds IPv4 only, which reports a healthy container as unhealthy. |
 
-Actuator exposure is limited to `health`, and the mail health indicator is disabled deliberately: an
-unreachable SMTP host would mark the backend unhealthy and, through `depends_on`, block the whole
-stack — mail delivery is a downstream concern, not a liveness signal.
+Actuator exposure is limited to `health`. The mail indicator is disabled deliberately: an unreachable
+SMTP host would mark the backend unhealthy and block the whole stack through `depends_on`, and mail is
+a downstream concern rather than a liveness signal.
 
 ### Ports
 
-`POSTGRES_PORT` often needs overriding to `5433`, since a locally installed Postgres usually holds
-5432. Only the host side changes; nothing inside the network is affected.
-
-```bash
-POSTGRES_PORT=5433 docker compose up -d --build
-```
+See Troubleshooting for host port conflicts. `POSTGRES_PORT`, `BACKEND_PORT` and `FRONTEND_PORT`
+change only the host side, so nothing inside the compose network is affected.

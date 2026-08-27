@@ -8,7 +8,6 @@ import com.flowforge.user.User;
 import com.flowforge.user.UserRepository;
 import com.flowforge.workflow.dto.PublishRequest;
 import com.flowforge.workflow.dto.WorkflowVersionResponse;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,51 +27,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Structural validation of a workflow graph, and publishing it as an immutable version.
- *
- * <p>{@link WorkflowService} owns drafts; this service owns the moment a draft stops being editable.
- * The split is deliberate — a draft is allowed to be half-finished, so the four structural rules run
- * only here, at publish time (Requirements 7.1–7.5).</p>
- *
- * <h2>The four rules</h2>
- * <ol>
- *   <li><b>Exactly one Start node</b> (Requirement 7.1).</li>
- *   <li><b>Every node reachable from Start</b>, established by a breadth-first search that follows
- *       edges in their authored direction (Requirement 7.2). Each unreachable node is reported
- *       individually, because "something is disconnected" is not actionable on a canvas.</li>
- *   <li><b>No orphaned edges</b> — no edge may have a missing endpoint or an endpoint belonging to a
- *       different version (Requirement 7.3).</li>
- *   <li><b>At least one End node</b> (Requirement 7.4).</li>
- * </ol>
- *
- * <p>All four always run and every violation is collected (Requirement 7.5). Validation never
- * short-circuits, so one publish attempt tells the designer everything that is wrong. The BFS starts
- * from <em>all</em> Start nodes, so a graph that also breaks rule 1 still gets a meaningful
- * reachability answer instead of declaring every node unreachable; with zero Start nodes the search
- * has no frontier and every node is, correctly, unreachable.</p>
- *
- * <p>Rules are checked against the relational {@code workflow_nodes}/{@code workflow_edges} rows,
- * which are the authoring source of truth. {@code graph_json} is derived from them at publish time,
- * so an orphaned edge cannot hide in the snapshot.</p>
- *
- * <h2>What publishing does</h2>
- * <p>One transaction (Requirements 7.6, 7.7): freeze the target version's {@code graph_json} into a
- * deeply immutable snapshot, stamp {@code published_at}/{@code published_by}, flag it published,
- * clear {@code is_current} on the version that held it and set it here, and flip the parent workflow
- * to {@link WorkflowStatus#ACTIVE} on first publish. Prior versions are otherwise untouched: their
- * graphs, nodes and edges stay exactly as published, which is what lets a running instance keep
- * executing the definition it started on.</p>
- *
- * <p>Publishing also opens the next draft — a copy of what was just published, numbered one higher.
- * Without it a published workflow would be uneditable, since {@link WorkflowService#saveDraft} quite
- * rightly refuses to write to a frozen version. Editing that successor and publishing it is how a
- * workflow gets its second immutable version.</p>
- *
- * <p>Re-publishing an already published version is refused with 409 rather than silently repeating
- * the work: the snapshot is frozen, and a second publish would either be a no-op or a lie about
- * {@code published_at}.</p>
- */
 @Service
 @Slf4j
 public class WorkflowVersionService {
@@ -88,11 +42,6 @@ public class WorkflowVersionService {
     /** Config rules by the node type they police; node types absent from it need no configuration. */
     private final Map<NodeType, NodeConfigRule> configRulesByType;
 
-    /**
-     * @param configRules every {@link NodeConfigRule} bean; the executors implement their own
-     * @throws IllegalStateException when two rules claim the same node type, which would make
-     *                               validation depend on bean ordering
-     */
     public WorkflowVersionService(
             WorkflowVersionRepository versionRepository,
             WorkflowNodeRepository nodeRepository,
@@ -124,16 +73,6 @@ public class WorkflowVersionService {
         log.info("Node config rules registered for {}", index.keySet());
     }
 
-    /**
-     * Run all four structural rules over a version's stored graph (Requirements 7.1–7.5).
-     *
-     * <p>Read-only: this reports what publishing would say, which is what the builder's "validate"
-     * affordance needs.</p>
-     *
-     * @param versionId the version to validate
-     * @return every violation found, empty when the graph is publishable
-     * @throws EntityNotFoundException 404 when no such version exists
-     */
     @Transactional(readOnly = true)
     public ValidationResult validate(UUID versionId) {
         WorkflowVersion version = versionRepository.findById(versionId)
@@ -141,22 +80,6 @@ public class WorkflowVersionService {
         return validateGraph(version);
     }
 
-    /**
-     * Publish a draft version as an immutable snapshot (Requirements 7.6, 7.7).
-     *
-     * <p>When {@code request} carries a graph it is saved to the draft first, so the builder can
-     * publish exactly what is on the canvas in one call; the draft-save path performs its own payload
-     * checks. Then the structural rules run, and only a clean result freezes the version.</p>
-     *
-     * @param workflowId owning workflow, so a version id from another workflow cannot be used
-     * @param versionId  the draft version to publish
-     * @param request    optional canvas state to save before publishing; may be {@code null}
-     * @param actorId    the authenticated caller, recorded as the publisher
-     * @return the frozen version
-     * @throws EntityNotFoundException     404 when the workflow, version or caller does not exist
-     * @throws AppException                409 when the version is already published
-     * @throws WorkflowValidationException 422 listing every structural violation found
-     */
     @Transactional
     public WorkflowVersionResponse publish(
             UUID workflowId,
@@ -217,13 +140,6 @@ public class WorkflowVersionService {
         return versionMapper.toResponse(published);
     }
 
-    /**
-     * The version history of a workflow, oldest first, with publish timestamps and authors
-     * (Requirement 8.3).
-     *
-     * @param workflowId the workflow whose history is wanted
-     * @return the versions in ascending version-number order
-     */
     @Transactional(readOnly = true)
     public List<WorkflowVersionResponse> listVersions(UUID workflowId) {
         return versionMapper.toResponseList(
@@ -260,13 +176,6 @@ public class WorkflowVersionService {
                 : List.of("Graph must contain exactly one Start node, found " + starts);
     }
 
-    /**
-     * Rule 2 — every node reachable from Start (Requirement 7.2), by BFS over outgoing edges.
-     *
-     * <p>Unreachable nodes are dead configuration: the engine can never execute them, so publishing
-     * them would silently ship a step nobody ever sees. One violation per node, named, so the
-     * builder can highlight exactly which shapes are stranded.</p>
-     */
     private List<String> checkAllNodesReachable(List<WorkflowNode> nodes, List<WorkflowEdge> edges) {
         Set<UUID> nodeIds = new LinkedHashSet<>();
         nodes.forEach(node -> nodeIds.add(node.getId()));
@@ -308,14 +217,6 @@ public class WorkflowVersionService {
         return violations;
     }
 
-    /**
-     * Rule 3 — no orphaned edges (Requirement 7.3).
-     *
-     * <p>An edge whose endpoint is missing, or belongs to another version, describes a transition the
-     * engine cannot take. The database's foreign keys guarantee the row exists; they do not guarantee
-     * it belongs to <em>this</em> graph, which is the case that actually occurs after a node is
-     * removed from a canvas.</p>
-     */
     private List<String> checkNoOrphanedEdges(UUID versionId, List<WorkflowNode> nodes, List<WorkflowEdge> edges) {
         Set<UUID> nodeIds = new LinkedHashSet<>();
         nodes.forEach(node -> nodeIds.add(node.getId()));
@@ -344,19 +245,6 @@ public class WorkflowVersionService {
         return hasEnd ? List.of() : List.of("Graph must contain at least one End node");
     }
 
-    /**
-     * Rule 5 — every node is configured well enough to run (Requirement 7.5).
-     *
-     * <p>The first four rules judge shape; this one judges whether the shape can execute. An Approval
-     * node naming no approver, a Condition node with an expression that will not parse, a timeout of
-     * zero minutes: all four structural rules pass, publishing succeeds, and then every request that
-     * reaches the node fails — against a version that is now immutable, in front of a user who cannot
-     * fix it. Anything knowable from the definition alone belongs here rather than at execution time.
-     *
-     * <p>The rules are the executors, supplied by Spring through {@link NodeConfigRule}. That is what
-     * keeps this honest: the class that reads a config key is the class that declares it required, so
-     * validation cannot quietly diverge from execution. A node type with no rule needs no configuration.
-     */
     private List<String> checkNodeConfiguration(List<WorkflowNode> nodes, List<WorkflowEdge> edges) {
         List<String> violations = new ArrayList<>();
         for (WorkflowNode node : nodes) {
@@ -393,13 +281,6 @@ public class WorkflowVersionService {
         version.setPublishedBy(publisher);
     }
 
-    /**
-     * Move the current-version flag onto the freshly published version, in the same transaction, so
-     * a workflow never has two current versions or none (Requirement 7.6).
-     *
-     * <p>The previously current version keeps its graph, nodes, edges and publish metadata; only the
-     * flag moves (Requirement 7.7).</p>
-     */
     private void makeCurrent(Workflow workflow, WorkflowVersion version) {
         Optional<WorkflowVersion> previous = versionRepository.findByWorkflowIdAndIsCurrentTrue(workflow.getId());
         previous.filter(candidate -> !candidate.getId().equals(version.getId()))
@@ -410,14 +291,6 @@ public class WorkflowVersionService {
         version.setIsCurrent(true);
     }
 
-    /**
-     * Open the next editable draft as a copy of what was just published.
-     *
-     * <p>A published version is immutable, so without this a workflow would freeze permanently on
-     * first publish. The successor is numbered one above the highest existing version, starts life
-     * unpublished and not current, and owns its own node and edge rows — nothing it contains points
-     * back at the published graph (Requirement 7.7).</p>
-     */
     private WorkflowVersion openSuccessorDraft(Workflow workflow, WorkflowVersion published) {
         int nextNumber = versionRepository.findFirstByWorkflowIdOrderByVersionNumberDesc(workflow.getId())
                 .map(WorkflowVersion::getVersionNumber)
@@ -437,15 +310,6 @@ public class WorkflowVersionService {
         return saved;
     }
 
-    /**
-     * A deep, unmodifiable copy of a graph payload.
-     *
-     * <p>Freezing has to be real. {@code graph_json} is assembled from live node and edge rows, and
-     * a node's {@code configJson} is a mutable map — handing that same instance to a published
-     * snapshot would let a later draft edit reach in and rewrite history. Copy first, then wrap, so
-     * the snapshot cannot be changed through any reference that survives the transaction
-     * (Requirements 7.6, 7.7).</p>
-     */
     @SuppressWarnings("unchecked")
     private Map<String, Object> freezeGraph(Map<String, Object> graph) {
         return (Map<String, Object>) freezeValue(graph);

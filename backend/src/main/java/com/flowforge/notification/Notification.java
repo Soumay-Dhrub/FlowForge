@@ -12,17 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * One in-app message for one user (Requirement 17.1).
- *
- * <p>{@link #payload} carries whatever the emitting event wants the reader to see — a message, the
- * instance and node it came from — rather than a rendered string, so the notification list and the
- * email templates of task 27 can present the same record differently.
- *
- * <p>There is deliberately no {@code updated_at}: {@code notifications} in
- * {@code V1__initial_schema.sql} has none. {@link #isRead} is the only mutable field
- * (Requirement 18.1).
- */
 @Entity
 @Table(name = "notifications")
 @Getter

@@ -22,28 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.flowforge.support.IntegrationTestBase;
 
-/**
- * Email notifications and preferences against a real PostgreSQL database
- * (Requirements 17.4, 17.5, 18.2).
- *
- * <p>Four things the in-memory tests cannot establish.
- * <ol>
- *   <li>That {@link NotificationPreference} matches the Flyway schema at all — {@code ddl-auto:
- *       validate} means the context only starts if every column and type lines up.</li>
- *   <li>That one user has at most one row per event type. That is a database constraint, not a service
- *       rule; a map keyed by event type would satisfy it by construction and prove nothing.</li>
- *   <li>That the email leaves <em>after</em> the transaction commits, checked from inside a real
- *       transaction rather than by reading the dispatcher's source.</li>
- *   <li>That a rolled-back transaction sends nothing — the whole reason for the afterCommit
- *       decision.</li>
- * </ol>
- *
- * <p>The mailer is substituted for a recording one; everything else is the production wiring, including
- * the real preference lookup and the real Thymeleaf engine behind {@link SpringMailEmailSender} (which
- * this test's substitution bypasses, and {@code EmailTemplateRenderingTest} covers directly).
- *
- * <p>Validates: Requirements 17.4, 17.5, 18.2.
- */
 class NotificationEmailIntegrationTest extends IntegrationTestBase {
 
     /** Records instead of sending; the rest of the subsystem is the production wiring. */
@@ -110,11 +88,6 @@ class NotificationEmailIntegrationTest extends IntegrationTestBase {
         assertThat(stored.getUpdatedAt()).isNotNull();
     }
 
-    /**
-     * {@code UNIQUE (user_id, event_type)} enforced by PostgreSQL, not by the service. Without it a user
-     * could accumulate contradictory rows for one event and the effective answer would depend on which
-     * one a query happened to return first.
-     */
     @Test
     @DisplayName("The database refuses a second row for the same user and event type")
     void oneRowPerUserPerEvent() {

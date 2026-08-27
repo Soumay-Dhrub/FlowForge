@@ -18,18 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * The conversation attached to a request (Requirements 15.1, 15.2, 15.3).
- *
- * <p>Posting and reading are guarded by the same rule, applied through the same collaborator: only a
- * participant of the request may do either (Requirement 15.3). Reading is the half that matters most —
- * a comment thread on an expense claim, a grievance or a leave request carries exactly the context its
- * participants need and nobody else should have — so the check is on the read path, not merely on the
- * write path with an obscure id standing in for access control.
- *
- * <p>The thread is flat and chronological. See {@link Comment} for why, and for the schema discrepancy
- * behind it.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -40,34 +28,11 @@ public class CommentService {
     private final InstanceParticipants participants;
     private final AuditLogService auditLogService;
 
-    /**
-     * Post a comment on a request (Requirement 15.1).
-     *
-     * @param instanceId the request
-     * @param userId     the author, who must be a participant
-     * @param body       what to say; must not be blank
-     * @return the stored comment
-     * @throws EntityNotFoundException 404 when the request or the author does not exist
-     * @throws AppException            403 when the author is not a participant, 400 when the body is blank
-     */
     @Transactional
     public CommentResponse addComment(UUID instanceId, UUID userId, String body) {
         return addComment(instanceId, userId, body, null);
     }
 
-    /**
-     * Post a comment, optionally as a reply to an existing one (Requirement 15.1).
-     *
-     * @param instanceId the request
-     * @param userId     the author, who must be a participant
-     * @param body       what to say; must not be blank
-     * @param parentId   the comment being replied to, or {@code null} for a new point
-     * @return the stored comment
-     * @throws EntityNotFoundException 404 when the request, the author or the parent does not exist
-     * @throws AppException            403 when the author is not a participant, 400 when the body is
-     *                                 blank, the parent belongs to another request, or the parent is
-     *                                 itself a reply
-     */
     @Transactional
     public CommentResponse addComment(UUID instanceId, UUID userId, String body, UUID parentId) {
         WorkflowInstance instance = participants.requireParticipant(instanceId, userId);
@@ -102,15 +67,6 @@ public class CommentService {
         return toResponse(saved);
     }
 
-    /**
-     * A request's comments, oldest first (Requirements 15.2, 15.3).
-     *
-     * @param instanceId the request
-     * @param userId     the reader, who must be a participant
-     * @return the comments in the order they were posted
-     * @throws EntityNotFoundException 404 when the request does not exist
-     * @throws AppException            403 when the reader is not a participant
-     */
     @Transactional(readOnly = true)
     public List<CommentResponse> listComments(UUID instanceId, UUID userId) {
         participants.requireParticipant(instanceId, userId);
@@ -119,18 +75,6 @@ public class CommentService {
                 .toList();
     }
 
-    /**
-     * The comment a reply may attach to, or a refusal explaining why not.
-     *
-     * <p>Two rules the database cannot enforce. A parent must belong to the request being commented on —
-     * {@code parent_comment_id} only proves the row exists, and without this a reply could quote a comment
-     * from a request its author is not a participant of, leaking that comment's existence and pulling its
-     * text into a thread it does not belong to. And a parent must not itself be a reply, which is what
-     * keeps the thread one level deep.
-     *
-     * <p>Both are 400 rather than 404: the parent may well exist, so reporting "not found" would be untrue,
-     * and the caller's request is what is wrong.
-     */
     private Comment requireReplyableParent(UUID parentId, UUID instanceId) {
         Comment parent = commentRepository.findById(parentId)
                 .orElseThrow(() -> new EntityNotFoundException("Comment", parentId));
@@ -161,13 +105,6 @@ public class CommentService {
                 comment.getCreatedAt());
     }
 
-    /**
-     * Audit-friendly view.
-     *
-     * <p>The body is recorded by length rather than by content: the audit trail proves that somebody said
-     * something on a request at a time, and copying the text into {@code audit_logs} would duplicate
-     * possibly sensitive content into a table with a different access rule and no cascade.
-     */
     private Map<String, Object> snapshot(Comment comment) {
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("id", String.valueOf(comment.getId()));

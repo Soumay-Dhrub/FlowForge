@@ -8,13 +8,6 @@ export const instanceKeys = {
   detail: (id: string) => ["instances", "detail", id] as const,
 };
 
-/**
- * `GET /api/instances/{id}` — one request in full, submitted payload included.
- *
- * Restricted to the initiator or a privileged role, so an EMPLOYEE deciding a task on someone else's
- * request gets a 403 here even though they can read the task itself. Callers must treat that as a
- * missing section rather than a failed page.
- */
 export async function fetchInstance(id: string): Promise<WorkflowInstance> {
   return unwrap(await api.get<ApiResponse<WorkflowInstance>>(`/instances/${id}`));
 }

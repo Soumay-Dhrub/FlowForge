@@ -16,19 +16,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.Mockito.mock;
 
-/**
- * The four notification templates, rendered by the real Thymeleaf engine (Requirement 17.4).
- *
- * <p>Two things only this test can establish. First, that the templates exist and resolve — including
- * the shared fragments they pull in, which a mocked engine would never notice were missing. Second, and
- * the reason this test is not optional: <b>that variables are escaped</b>. A user's name, a workflow's
- * name and a comment are all free text that somebody else typed; if any of them reached an inbox as
- * markup, FlowForge would be a mail-borne HTML injection vector against its own users. The assertion is
- * on the rendered output, not on the template source, because "we remembered to use th:text" is not the
- * same claim.
- *
- * <p>Validates: Requirements 17.4.
- */
 class EmailTemplateRenderingTest {
 
     /** Text that renders as markup if anything interpolates it unescaped. */

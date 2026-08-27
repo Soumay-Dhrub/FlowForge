@@ -19,13 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Builds the object graph a performance report reads: a workflow with one published version, instances
- * with initiators in departments, and decided tasks at nodes.
- *
- * <p>Shared by the unit tests and the property test so both measure the same shape of data, and so the
- * property test's generators only have to produce numbers rather than entity graphs.
- */
 final class MetricsFixture {
 
     private final Workflow workflow;
@@ -100,14 +93,6 @@ final class MetricsFixture {
                 .build();
     }
 
-    /**
-     * Seed one instance.
-     *
-     * @param initiator   who submitted it
-     * @param status      where it ended up
-     * @param startedAt   submission time
-     * @param completedAt terminal time, or {@code null} for a running instance
-     */
     WorkflowInstance instance(User initiator, InstanceStatus status, Instant startedAt, Instant completedAt) {
         WorkflowInstance instance = WorkflowInstance.builder()
                 .id(UUID.randomUUID())
@@ -121,17 +106,6 @@ final class MetricsFixture {
         return instance;
     }
 
-    /**
-     * Seed a decided task at a node.
-     *
-     * @param instance  the instance the task belongs to
-     * @param node      the node that raised it
-     * @param createdAt when the node handed the work over
-     * @param decidedAt when the decision was recorded
-     * @param updatedAt the task row's last write, deliberately settable apart from {@code decidedAt} so a
-     *                  test can prove which of the two the dwell time uses
-     * @param decision  approve or reject
-     */
     Approval decidedTask(
             WorkflowInstance instance,
             WorkflowNode node,

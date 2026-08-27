@@ -19,18 +19,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Immutable record of a create, update, approve, reject, or delete action on any entity.
- *
- * <p>Maps to the {@code audit_logs} table created in {@code V1__initial_schema.sql}. Every
- * column is marked {@code updatable = false}: once a row is written, JPA will never issue an
- * UPDATE for it, which is the persistence-layer half of the immutability guarantee
- * (Requirement 19.2). There is deliberately no {@code updated_at} column and no soft-delete flag.</p>
- *
- * <p>{@code actorId} is a plain UUID rather than a {@code @ManyToOne} association: the audit
- * trail must survive actor deletion (the FK is {@code ON DELETE SET NULL}) and writing an entry
- * should never require loading the actor aggregate.</p>
- */
 @Entity
 @Table(name = "audit_logs")
 @Getter

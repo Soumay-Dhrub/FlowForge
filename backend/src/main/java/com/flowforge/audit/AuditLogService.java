@@ -10,27 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * The write seam for the audit trail (Requirement 19.1).
- *
- * <h2>Two ways in, on purpose</h2>
- * <p>Services call {@link #record} explicitly at the point of change, and {@link AuditLogAspect}
- * intercepts service writes generically. They are not redundant and they are not duplicates: the aspect
- * <em>defers</em> to an explicit call made during the same invocation, because a method that recorded its
- * own entry knows things the aspect cannot — which entity actually changed, what it looked like before,
- * and whether the action is a {@code PUBLISH_VERSION} rather than an {@code UPDATE_WORKFLOWVERSION}. The
- * aspect exists to cover the methods that record nothing, so that coverage does not depend on every
- * future author remembering. {@link #explicitWrites()} is the counter that coordinates the two.
- *
- * <h2>Append only</h2>
- * <p>No update or delete operation is exposed here, {@link AuditLogRepository} declares none, and
- * {@code V4__audit_logs_append_only.sql} enforces it in the database where nothing in Java can reach
- * around it (Requirement 19.2).
- *
- * <p>Reading the trail lives in {@link AuditLogSearchService}, not here. Every producer in the system
- * depends on this class to write one entry; widening it with search, paging and CSV export would make all
- * of them depend on the query collaborator too, and every test double stub it.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -85,18 +64,6 @@ public class AuditLogService {
     /** A delegation's window closed and routing returned to the delegator (Requirement 16.3). */
     public static final String ACTION_EXPIRE_DELEGATION = "EXPIRE_DELEGATION";
 
-    /**
-     * How many entries this thread has recorded explicitly.
-     *
-     * <p>A thread-local counter rather than a flag, so nesting works: the aspect takes a reading before
-     * the method runs and compares afterwards, which tells it whether an entry was written <em>during
-     * this invocation</em> regardless of how many were written before it or by another request in
-     * parallel. A boolean would be wrong the first time two service calls nested.
-     *
-     * <p>Never cleared. The value is a single {@code int} per thread that only ever grows, and clearing
-     * it would need a request boundary the audit trail should not have to know about. What matters is the
-     * difference between two readings, not the absolute value.
-     */
     private static final ThreadLocal<int[]> EXPLICIT_WRITES = ThreadLocal.withInitial(() -> new int[1]);
 
     private final AuditLogRepository auditLogRepository;
@@ -110,16 +77,6 @@ public class AuditLogService {
         return EXPLICIT_WRITES.get()[0];
     }
 
-    /**
-     * Append an audit entry, attributing it to the caller in the current security context.
-     *
-     * @param action      action type, e.g. {@code CREATE_USER}
-     * @param entityType  entity discriminator, e.g. {@code User}
-     * @param entityId    id of the affected entity
-     * @param beforeState state before the change, or {@code null} for creates
-     * @param afterState  state after the change, or {@code null} for deletes
-     * @return the persisted entry
-     */
     @Transactional
     public AuditLog record(
             String action,
@@ -160,12 +117,6 @@ public class AuditLogService {
         return entry;
     }
 
-    /**
-     * The authenticated caller's id, or {@code null} when the action has no authenticated actor.
-     *
-     * <p>{@code JwtAuthenticationFilter} sets the principal to the user's UUID, so anything else
-     * (an anonymous token, a test principal) is treated as "no actor" rather than guessed at.</p>
-     */
     public UUID currentActorId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {

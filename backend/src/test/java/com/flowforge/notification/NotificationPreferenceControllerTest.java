@@ -21,15 +21,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * HTTP-level behaviour of {@link NotificationPreferenceController} (Requirement 18.2).
- *
- * <p>Standalone {@code MockMvc} over the real service, so the assertions are about status codes and
- * bodies rather than exception types. The point being pinned is that the endpoint has no way to name a
- * user: the subject is always the authenticated principal.
- *
- * <p>Validates: Requirements 18.2.
- */
 class NotificationPreferenceControllerTest {
 
     private InMemoryNotificationFixture fixture;

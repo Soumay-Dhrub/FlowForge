@@ -20,14 +20,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * HTTP-level behaviour of {@link RoleController} and {@link DepartmentController}.
- *
- * <p>These two endpoints exist so a client can populate the role and department selectors on the
- * user forms without hard-coding seeded UUIDs. What matters, and what is asserted here, is that each
- * returns 200 with usable {id, name} options in a stable order, and that neither leaks more of the
- * underlying entity than that — a role's permission map or a department's manager.</p>
- */
 class ReferenceDataEndpointsTest {
 
     private final RoleRepository roleRepository = mock(RoleRepository.class);

@@ -26,39 +26,9 @@ import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Property 10: Condition Evaluation Routes to Correct Edge.
- *
- * <p>For any Condition node with any set of outgoing edges, and any request payload, the engine takes
- * the <em>first</em> edge in authored order whose condition holds for that payload, and marks the
- * instance ERROR when none of them does (Requirements 9.4, 9.5).
- *
- * <h2>The oracle</h2>
- * <p>Which edge should win is decided by a hand-written Java predicate attached to each generated
- * condition, evaluated over the generated map in the test itself. Nothing about SpEL, edge ordering or
- * the executor is reused to compute the expectation, so the test can disagree with the implementation —
- * which is the only way it can catch it being wrong. Each generated condition therefore carries two
- * independent statements of the same intent: the expression the workflow is authored with, and the
- * predicate the test believes it means.
- *
- * <p>Branch targets are Task nodes, which pause. So the branch taken is observable as the node the
- * instance is sitting on afterwards, and the single task raised confirms that branch actually executed
- * rather than merely being pointed at. Conditions are drawn with repetition and include overlapping
- * predicates and an unconditioned fallback edge, so the generated graphs cover several simultaneously
- * true conditions (where only ordering decides), a fallback shadowing everything after it, and edge
- * sets — including the empty one — where nothing matches at all.
- *
- * <p><b>Validates: Requirements 9.4, 9.5</b></p>
- */
 @Tag("flowforge")
 class ConditionRoutingPropertyTest {
 
-    /**
-     * A condition a generated edge can carry: the SpEL the designer authors, and — written separately —
-     * what the test independently believes it means.
-     *
-     * <p>{@link #FALLBACK} carries no expression, which is the unconditional else branch.
-     */
     private enum Condition {
 
         AMOUNT_OVER_100("amount > 100", data -> amount(data) > 100),
@@ -172,12 +142,6 @@ class ConditionRoutingPropertyTest {
 
     // ── generators ───────────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Zero to five outgoing edges, drawn with repetition from the catalogue.
-     *
-     * <p>Zero is included on purpose: a Condition node with no way out is the same "nothing matched"
-     * outcome by the same reading. Repetition and overlap are what make ordering matter.
-     */
     @Provide
     Arbitrary<List<Condition>> conditionSets() {
         return Arbitraries.of(Condition.values()).list().ofMinSize(0).ofMaxSize(5);

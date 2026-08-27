@@ -1,11 +1,5 @@
 package com.flowforge.workflow;
 
-/**
- * Node types supported by the workflow builder and the execution engine.
- *
- * <p>Persisted as a string in {@code workflow_nodes.type}; the set of values mirrors the
- * {@code CHECK} constraint declared in {@code V1__initial_schema.sql}.
- */
 public enum NodeType {
 
     /** Entry point of a workflow. Exactly one is required for publishing. */
