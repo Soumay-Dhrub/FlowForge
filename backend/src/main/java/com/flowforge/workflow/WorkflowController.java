@@ -25,28 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Workflow authoring endpoints.
- *
- * <p>Authorization follows the RBAC table in the design document (Requirements 3.1, 3.2). Workflow
- * authoring is a privileged activity, so every endpoint here is ADMIN or MANAGER — except
- * publishing, which the design reserves for ADMIN alone:</p>
- * <ul>
- *   <li>{@code GET/POST /api/workflows} — ADMIN, MANAGER</li>
- *   <li>{@code GET /api/workflows/{id}} — ADMIN, MANAGER</li>
- *   <li>{@code PUT /api/workflows/{id}/versions/{vId}} — ADMIN, MANAGER</li>
- *   <li>{@code POST /api/workflows/{id}/clone} — ADMIN, MANAGER</li>
- *   <li>{@code POST /api/workflows/{id}/versions/{vId}/publish} — ADMIN</li>
- * </ul>
- *
- * <p>A manager can therefore author freely but cannot make a definition live: publishing binds every
- * future instance to that graph, so it sits with ADMIN. Employees never read definitions through this
- * controller — they interact with workflows through instances and tasks.</p>
- *
- * <p>Requests with no, expired, or malformed token never reach these methods — the security filter
- * chain rejects them with 401 (Requirement 3.3). {@code JwtAuthenticationFilter} sets the principal
- * to the caller's UUID, which is what {@code @AuthenticationPrincipal} resolves below.</p>
- */
 @RestController
 @RequestMapping("/api/workflows")
 @RequiredArgsConstructor
@@ -104,13 +82,6 @@ public class WorkflowController {
         return ResponseEntity.ok(ApiResponse.success("Draft saved", saved));
     }
 
-    /**
-     * Publish a draft version as an immutable snapshot (Requirements 7.1–7.7). ADMIN only.
-     *
-     * <p>The body is optional: supply nodes and edges to save the canvas before publishing, or omit
-     * it to publish the stored draft as-is. Returns 422 listing every structural violation when the
-     * graph breaks any of the four rules, and 409 when the version is already published.</p>
-     */
     @PostMapping("/{id}/versions/{versionId}/publish")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<WorkflowVersionResponse>> publishVersion(

@@ -32,19 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * The reviewer's side of a workflow: seeing what is waiting, and settling it
- * (Requirements 12.1–12.3, 13.1–13.4).
- *
- * <p>Recording a decision is the moment a paused instance starts moving again. The engine left the
- * instance {@code RUNNING} on the node that raised the task, so this service writes the decision and
- * then hands control back with {@code advanceFrom}, which resumes from that node — including fanning
- * out if the node has several ways forward.
- *
- * <p>Ordering and the decision write happen in one transaction on purpose. A decision that committed
- * without the instance advancing would leave a workflow permanently stalled on a task that is already
- * answered, and that is not a state any retry could repair.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -59,15 +46,6 @@ public class TaskService {
     private final DelegationRepository delegationRepository;
     private final DelegationRouter delegationRouter;
 
-    /**
-     * The tasks a user should see, newest first, narrowed by whatever the caller supplied
-     * (Requirements 12.1, 12.2, 12.3).
-     *
-     * @param assigneeId whose queue to read; {@code null} for every task, which callers must only
-     *                   pass for a privileged role
-     * @param filter     the optional narrowings; {@code null} means none
-     * @return the matching tasks, newest first
-     */
     @Transactional(readOnly = true)
     public List<TaskResponse> listTasks(UUID assigneeId, TaskFilter filter) {
         TaskFilter effective = filter == null ? TaskFilter.none() : filter;
@@ -85,33 +63,11 @@ public class TaskService {
                 .toList();
     }
 
-    /**
-     * One task, for its detail view.
-     *
-     * @param taskId the task to read
-     * @return the task
-     * @throws EntityNotFoundException 404 when no such task exists
-     */
     @Transactional(readOnly = true)
     public TaskResponse getTask(UUID taskId) {
         return toResponse(requireTask(taskId));
     }
 
-    /**
-     * Record a reviewer's decision and resume the instance (Requirements 13.1, 13.2, 13.3).
-     *
-     * <p>A rejection without a comment is refused with 400 before anything is written
-     * (Requirement 13.2). The rule lives here rather than in a bean-validation annotation so the
-     * response can name {@code comment} as the field at fault.
-     *
-     * @param taskId  the task being decided
-     * @param userId  the reviewer
-     * @param request the decision and its optional comment
-     * @return the decided task
-     * @throws EntityNotFoundException 404 when the task or the reviewer does not exist
-     * @throws AppException            400 for a rejection with no comment, 403 when the task is not
-     *                                 the caller's, 409 when it is already decided or not pending
-     */
     @Transactional
     public TaskResponse recordDecision(UUID taskId, UUID userId, TaskDecisionRequest request) {
         Task task = requireTask(taskId);
@@ -171,58 +127,6 @@ public class TaskService {
         return toResponse(decided);
     }
 
-    /**
-     * Hand a user's pending work to somebody else for a period (Requirements 16.1, 16.2).
-     *
-     * <p>Two effects, in one transaction: the tasks the delegator is holding right now move to the
-     * delegate, and a {@link Delegation} record is written so that work assigned <em>later</em> in the
-     * window is routed there too (Requirement 16.2, via {@link DelegationRouter}). Either without the
-     * other is half a delegation — moving only today's tasks leaves tomorrow's arriving to an absent
-     * approver, and recording only the rule leaves the queue the delegator is already sitting on.
-     *
-     * <h2>What is refused, and why</h2>
-     * <ul>
-     *   <li><b>Delegating to yourself</b> — 400. It cannot mean anything: the tasks are already yours,
-     *       and stored as a rule it makes every future assignment consult a redirect to its own origin.</li>
-     *   <li><b>{@code endAt} at or before {@code startAt}</b> — 400. An empty or reversed window would
-     *       store a delegation that never routes anything and never expires, which looks to its author
-     *       exactly like one that works.</li>
-     *   <li><b>A window entirely in the past</b> — 400. Nothing would be routed and the expiry sweep
-     *       would close it on its next tick; accepting it would be accepting a no-op.</li>
-     *   <li><b>Overlapping an existing active delegation of the same delegator</b> — 409. "Where does
-     *       this user's work go?" has to have one answer. With two overlapping rules the answer depends
-     *       on query order, and a task landing with the wrong person is not something the recipient can
-     *       detect. End the first delegation before starting a second.</li>
-     *   <li><b>Closing a cycle</b> — 409, e.g. accepting B→A while A→B is live. Routing survives it
-     *       (see {@link DelegationRouter}), but the outcome is arbitrary and the users involved would
-     *       reasonably expect their work to be somewhere.</li>
-     *   <li><b>An inactive delegate</b> — 400. Someone who cannot log in cannot decide, so this would
-     *       park the work where nobody can reach it (Requirement 4.2).</li>
-     * </ul>
-     *
-     * <h2>Tasks that move, and the status they keep</h2>
-     * <p>Only {@code PENDING} tasks move, matching Requirement 16.1's "current pending Tasks", and they
-     * <b>stay PENDING</b> — {@code assigned_to} changes and the status does not. The {@code DELEGATED}
-     * status the schema allows is deliberately not used: {@code recordDecision} accepts PENDING and
-     * ESCALATED, and the overdue sweep queries PENDING, so marking a moved task DELEGATED would make it
-     * undecidable by the person who now owns it and invisible to escalation, silently dropping its
-     * deadline (Requirement 11.2). The delegation record, not the task's status, is where "this was
-     * delegated" is recorded.
-     *
-     * <p>A window that starts in the future moves nothing now; it is stored, and routing picks it up when
-     * it begins. Moving tasks at that later moment would need an activation sweep, which nothing in
-     * Requirement 16 asks for — 16.1 is about a delegation taking effect, and 16.2 covers what arrives
-     * during the window.
-     *
-     * @param userId     the delegator
-     * @param delegateId who takes the work on
-     * @param startAt    when the delegation begins
-     * @param endAt      when it ends
-     * @return the delegation, including which tasks changed hands
-     * @throws EntityNotFoundException 404 when either user does not exist
-     * @throws AppException            400 for a nonsensical window, self-delegation or an inactive
-     *                                 delegate; 409 for an overlap or a cycle
-     */
     @Transactional
     public DelegationResponse delegateTasks(
             UUID userId, UUID delegateId, Instant startAt, Instant endAt) {
@@ -324,6 +228,9 @@ public class TaskService {
         List<UUID> moved = new ArrayList<>(pending.size());
         for (Task task : pending) {
             Map<String, Object> before = snapshot(task);
+            // Reassign but leave the status alone. The schema's DELEGATED status is deliberately
+            // unused: recordDecision accepts PENDING and ESCALATED and the overdue sweep queries
+            // PENDING, so a DELEGATED task would be undecidable and invisible to escalation.
             task.setAssignedTo(delegate);
             Task saved = taskRepository.save(task);
             moved.add(saved.getId());
@@ -339,13 +246,6 @@ public class TaskService {
         return List.copyOf(moved);
     }
 
-    /**
-     * Tell the delegate what they have taken on (Requirement 17.1).
-     *
-     * <p>One notification for the delegation rather than one per task: "twelve tasks are now yours" is
-     * information, twelve near-identical messages are noise. Best effort, like every other notification
-     * here — a delegation that committed must not be undone by a notification failure.
-     */
     private void notifyDelegate(Delegation delegation, int reassignedCount) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("message", "Tasks have been delegated to you.");
@@ -364,27 +264,6 @@ public class TaskService {
         }
     }
 
-    /**
-     * Delegate the caller's pending work, from the task they are looking at
-     * (Requirement 16.1).
-     *
-     * <p><b>Why a per-task path delegates a whole queue.</b> The endpoint is
-     * {@code POST /api/tasks/{id}/delegate} because that is where the action lives in the product — the
-     * button is on a task the user is looking at when they realise they will be away. Requirement 16.1 is
-     * unambiguous about the effect, though: <em>all</em> current pending tasks move. So the path id is
-     * what authorises and anchors the request (it must be a task of the caller's, which is a better check
-     * than trusting a delegator id in the body), and the effect is the user's whole pending queue for the
-     * period. Delegating only the one task would satisfy the URL and contradict the requirement; the
-     * response lists exactly which tasks moved, so the caller is never in doubt about the wider effect.
-     *
-     * @param taskId  a task of the caller's, which the delegation is initiated from
-     * @param userId  the caller, and the delegator
-     * @param request the delegate and the window
-     * @return the delegation, including which tasks changed hands
-     * @throws EntityNotFoundException 404 when the task or either user does not exist
-     * @throws AppException            403 when the task is not the caller's, plus the validation
-     *                                 failures of {@link #delegateTasks}
-     */
     @Transactional
     public DelegationResponse delegateFromTask(
             UUID taskId, UUID userId, DelegateTasksRequest request) {
@@ -397,13 +276,6 @@ public class TaskService {
         return delegateTasks(userId, request.delegateId(), request.startAt(), request.endAt());
     }
 
-    /**
-     * Close every task an instance is still waiting on — what cancelling a request means for the
-     * people who were reviewing it.
-     *
-     * @param instanceId the cancelled instance
-     * @return how many tasks were closed
-     */
     @Transactional
     public int cancelOpenTasks(UUID instanceId) {
         List<Task> open = taskRepository.findByInstance_IdOrderByCreatedAtAsc(instanceId).stream()

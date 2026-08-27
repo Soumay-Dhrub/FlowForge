@@ -21,21 +21,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Authentication service: credential verification, token issuance, refresh rotation, logout and
- * password reset.
- *
- * <p>Security notes:</p>
- * <ul>
- *   <li>Passwords and token values are never logged.</li>
- *   <li>Failed logins always return the same generic 401 so callers cannot distinguish
- *       an unknown email, a wrong password, or a deactivated account.</li>
- *   <li>Refresh tokens are strictly single-use: the presented record is revoked inside the
- *       same transaction that issues the replacement pair.</li>
- *   <li>Password reset requests answer identically whether or not the email is registered, so the
- *       endpoint cannot be used to enumerate accounts.</li>
- * </ul>
- */
 @Service
 @Slf4j
 public class AuthService {
@@ -110,13 +95,7 @@ public class AuthService {
         return issueTokenPair(user);
     }
 
-    /**
-     * Validate and rotate a refresh token: the presented token is invalidated and a brand new
-     * access/refresh pair is issued. Presenting the same refresh token twice fails with 401.
-     *
-     * @throws AppException 401 if the token is malformed, expired, not a refresh token,
-     *                      unknown, already used/revoked, or belongs to an inactive user
-     */
+    /** Refresh tokens are single-use: this consumes the presented one and issues a replacement. */
     @Transactional
     public TokenResponse refreshToken(String token) {
         if (token == null || token.isBlank() || !jwtTokenProvider.validateToken(token)) {
@@ -166,15 +145,6 @@ public class AuthService {
         });
     }
 
-    /**
-     * Start a password reset (Requirements 5.1, 5.2).
-     *
-     * <p>A random single-use token is persisted with an expiry of at most 24 hours and emailed to
-     * the address. The method returns normally for unknown addresses and for deactivated accounts
-     * without doing any work, so the response is identical in every case and the endpoint reveals
-     * nothing about which emails are registered. A deactivated account is skipped because a new
-     * password would not restore access anyway — reactivation is an administrator action.</p>
-     */
     @Transactional
     public void requestPasswordReset(String email) {
         if (email == null || email.isBlank()) {
@@ -204,16 +174,6 @@ public class AuthService {
         log.info("Issued password reset token for user {}", user.getId());
     }
 
-    /**
-     * Apply a new password using a reset token (Requirements 5.3, 5.4, 5.5).
-     *
-     * <p>The token is claimed with a conditional update before the password is written, so the two
-     * happen in one transaction and a second, concurrent confirmation of the same token loses the
-     * race and is rejected. Completing a reset revokes every live refresh token for the user and
-     * appends an audit entry attributed to that user.</p>
-     *
-     * @throws AppException 400 if the token is unknown, expired, or already used
-     */
     @Transactional
     public void confirmPasswordReset(String token, String newPassword) {
         if (token == null || token.isBlank() || newPassword == null || newPassword.isBlank()) {

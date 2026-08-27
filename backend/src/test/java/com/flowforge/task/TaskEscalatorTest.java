@@ -30,12 +30,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Unit tests for {@link TaskEscalator} (Requirements 11.2, 11.3, 11.4).
- *
- * <p>Repositories are map-backed mocks so the real reassignment, notification and audit logic runs
- * and a write is visible to the next read.
- */
 class TaskEscalatorTest {
 
     private final Map<UUID, Task> tasksById = new LinkedHashMap<>();

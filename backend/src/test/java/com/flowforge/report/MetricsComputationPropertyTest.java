@@ -38,33 +38,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Property 16: Metrics Computation Correctness.
- *
- * <p>For any set of workflow instances with known start and end timestamps, and any set of decisions
- * taken at their nodes, the report's average approval time must equal the arithmetic mean of the
- * decided instances' durations, each node's average dwell must equal the arithmetic mean of the
- * intervals from task creation to decision at that node, and the bottleneck must be the node with the
- * highest of those means among the nodes that meet the sample threshold.</p>
- *
- * <p>The oracle is built from the generated numbers, not from the entities: the generator produces
- * durations and dwell times as plain integers, seeds a fixture whose timestamps are derived from them,
- * and then sums those same integers itself. So agreement is evidence that the service recovered the
- * intended arithmetic from timestamps, rather than a restatement of how it computes.</p>
- *
- * <p>The generated population deliberately mixes statuses. {@code CANCELLED} and {@code ERROR}
- * instances are given end timestamps and must still be left out of the average — a request that was
- * withdrawn or that hit a routing fault has an elapsed time, but not a time-to-decide — and
- * {@code RUNNING} instances have no end timestamp at all and must not be folded in as zero. A property
- * that only generated completed instances would pass for an implementation that averaged everything.</p>
- *
- * <p>The bottleneck is checked by value rather than by identity, since two nodes can legitimately tie:
- * the reported bottleneck must have a qualifying sample count and a mean no lower than any other
- * qualifying node's. Ties in the tie-break rule are the implementation's business; being the maximum is
- * the property.</p>
- *
- * <p><b>Validates: Requirements 21.1, 21.2</b></p>
- */
 @Tag("flowforge")
 class MetricsComputationPropertyTest {
 
@@ -160,11 +133,6 @@ class MetricsComputationPropertyTest {
 
     // ── generators ───────────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Populations of up to eight instances over three nodes, mixing every status, each instance carrying
-     * up to three decisions. Durations and dwell times are whole seconds so the oracle's arithmetic is
-     * exact and a mismatch means a wrong population or a wrong interval, not floating-point drift.
-     */
     @Provide
     Arbitrary<List<InstanceSpec>> populations() {
         Arbitrary<DecisionSpec> decisions = Combinators.combine(
@@ -257,13 +225,6 @@ class MetricsComputationPropertyTest {
         return new Scenario(fixture, nodes, service);
     }
 
-    /**
-     * The dwell samples each node should have, taken straight from the generated numbers.
-     *
-     * <p>Every instance is in scope — the property applies no filters — so a decision counts wherever
-     * its instance ended up, including on cancelled and running instances: the request may not have been
-     * decided, but that particular step was, and it took the time it took.
-     */
     private Map<UUID, List<Integer>> expectedDwells(Scenario scenario, List<InstanceSpec> population) {
         Map<UUID, List<Integer>> dwells = new LinkedHashMap<>();
         for (InstanceSpec spec : population) {

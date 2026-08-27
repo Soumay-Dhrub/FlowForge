@@ -1,25 +1,5 @@
 "use client";
 
-/**
- * The selected node's configuration.
- *
- * This panel is not a nicety. Publishing validates node configuration as well as graph structure
- * (Requirement 7.5): an Approval node that names no approver is a perfectly well-shaped graph that
- * cannot be published, so a canvas that can place nodes but not configure them can only ever produce
- * unpublishable workflows. Every field here maps to a key an executor reads, using that executor's
- * own key names — `assigneeUserId` for a Task, `approverUserId` for an Approval; they are different
- * keys for the same idea and the backend does not accept one for the other.
- *
- * Absent beats empty. Clearing a field removes the key rather than storing `""`, because the backend
- * reads "absent" as unset and would treat a blank string the same way only by accident.
- *
- * ## Who can pick a specific user
- * `GET /api/users` is ADMIN-only, so the user pickers are fetched and shown only for an ADMIN. A
- * MANAGER assigns by role, which is the assignment model that works for them without inventing an
- * endpoint. If a node already names a specific user, a MANAGER sees that id read-only with a way to
- * clear it — hiding it would make the field silently unfixable, and guessing a name is not possible
- * without the endpoint they are not allowed to call.
- */
 import { useQuery } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import SelectField from "@/components/ui/SelectField";

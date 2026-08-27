@@ -31,12 +31,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Unit tests for {@link AuthService}.
- *
- * <p>The repositories are backed by in-memory maps rather than fixed stub values, so the real
- * rotation and revocation logic is exercised (a token saved as revoked is read back revoked).</p>
- */
 class AuthServiceTest {
 
     private static final String SECRET =

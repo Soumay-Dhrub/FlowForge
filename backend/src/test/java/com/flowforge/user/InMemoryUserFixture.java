@@ -23,17 +23,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * A real {@link UserService} wired to in-memory repositories.
- *
- * <p>The repositories are Mockito mocks backed by maps rather than fixed stub returns, so writes
- * are visible to subsequent reads and the production logic (uniqueness check, hashing, token
- * revocation, audit emission) actually runs. Shared by the unit tests and the property tests.</p>
- *
- * <p>Bcrypt strength is 4 here: hashing cost is irrelevant to the behaviours under test and a
- * strength-12 hash per property try would dominate the build. The production strength is asserted
- * separately against the {@code SecurityConfig} bean.</p>
- */
 final class InMemoryUserFixture {
 
     final Map<UUID, User> usersById = new LinkedHashMap<>();

@@ -8,26 +8,6 @@ import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.util.List;
 
-/**
- * Renders a performance report as CSV (Requirement 21.5).
- *
- * <h2>One table, not two</h2>
- * <p>The report has two shapes — one row of workflow totals and one row per node — and a CSV with two
- * different row shapes stacked on top of each other is not a table any spreadsheet or dataframe can
- * read. So every row carries the same columns and a {@code scope} column says which kind it is:
- * {@code WORKFLOW} for the totals, {@code NODE} for each stage. Columns that do not apply to a row are
- * empty rather than zero, because an empty cell reads as "not applicable here" while a zero reads as a
- * measurement.
- *
- * <h2>Escaping</h2>
- * <p>Quoting follows RFC 4180: a field containing a comma, a double quote, a carriage return or a line
- * feed is wrapped in double quotes, and any double quote inside it is doubled. That is not decoration —
- * a workflow named {@code Travel, International} or {@code The "Fast" Track} would otherwise shift every
- * later column of that row, and the corruption is silent because the file still parses.
- *
- * <p>An empty report still writes its header line. A file with no header is indistinguishable from a
- * failed download; a header with no rows says plainly that nothing matched the filters.
- */
 public final class PerformanceCsvWriter {
 
     /** Column order, also the header line. */
@@ -60,12 +40,6 @@ public final class PerformanceCsvWriter {
         return String.join(",", COLUMNS) + "\r\n";
     }
 
-    /**
-     * Render a whole report.
-     *
-     * @param report the metrics to render
-     * @return the CSV document, header included
-     */
     public static String toCsv(WorkflowPerformanceResponse report) {
         StringBuilder out = new StringBuilder(header());
 
@@ -107,13 +81,6 @@ public final class PerformanceCsvWriter {
         return out.toString();
     }
 
-    /**
-     * Stream a report into a writer, for the export endpoint.
-     *
-     * @param report the metrics to render
-     * @param writer the destination; not closed here, since the container owns the response stream
-     * @throws UncheckedIOException when the destination fails mid-write, e.g. the client disconnected
-     */
     public static void writeTo(WorkflowPerformanceResponse report, Writer writer) {
         try {
             writer.write(toCsv(report));
@@ -137,15 +104,6 @@ public final class PerformanceCsvWriter {
         return line.append("\r\n").toString();
     }
 
-    /**
-     * RFC 4180 escaping of one field.
-     *
-     * <p>Package-private so the escaping can be tested on its own: it is the one piece of this class
-     * where a mistake corrupts the file rather than merely mislabelling it.
-     *
-     * @param value the raw value, possibly {@code null}
-     * @return the value as it should appear in the file
-     */
     static String escape(String value) {
         if (value == null) {
             return "";

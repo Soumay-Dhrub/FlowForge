@@ -11,13 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Workflow entity representing a named business process definition.
- *
- * <p>A workflow owns an ordered history of {@link WorkflowVersion} records. At most one of them
- * is flagged as the current published version, which is the definition new instances bind to
- * (Requirements 7.6, 7.7, 8.3).
- */
 @Entity
 @Table(name = "workflows")
 @Getter

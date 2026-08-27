@@ -8,14 +8,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Repository for Task entity operations.
- *
- * <p>The finders mirror the indexes {@code V1__initial_schema.sql} declares: {@code (assigned_to,
- * status)} for a user's task list (Requirement 12.1) and the partial index on {@code due_at} for the
- * overdue sweep (Requirement 11.2). Underscores spell out the association traversal rather than
- * leaving Spring Data to guess where the property boundary falls.
- */
 @Repository
 public interface TaskRepository extends JpaRepository<Task, UUID> {
 
@@ -35,10 +27,5 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
     List<Task> findByInstance_IdAndNode_IdAndStatusIn(
             UUID instanceId, UUID nodeId, Collection<TaskStatus> statuses);
 
-    /**
-     * Tasks whose deadline has passed and that are still waiting — the escalation scheduler's query
-     * (Requirement 11.2). Tasks with no {@code due_at} never match, which is how "no timeout
-     * configured" means "never escalates".
-     */
     List<Task> findByStatusAndDueAtBefore(TaskStatus status, Instant deadline);
 }

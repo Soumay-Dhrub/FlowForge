@@ -32,33 +32,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Property 8: Workflow Graph Validation is Exhaustive.
- *
- * <p>For any workflow graph that breaks at least one of the four structural rules — exactly one
- * Start node, every node reachable from Start, no orphaned edges, at least one End node — the
- * publish endpoint responds 422 Unprocessable Entity listing <em>every</em> violated rule and creates
- * no new version. For any graph that breaks none of them, publishing succeeds. Validation never
- * stops at the first problem.</p>
- *
- * <p>The endpoint is driven through a standalone {@code MockMvc} wired to the real
- * {@link WorkflowVersionService}, {@link WorkflowService} and {@link GlobalExceptionHandler}, so the
- * assertion is about the actual HTTP response and its error list, not an exception type. Method
- * security is deliberately absent here: who may publish is Property 5's subject.</p>
- *
- * <p>Graphs are materialized as {@code workflow_nodes}/{@code workflow_edges} rows rather than sent
- * as a publish payload, because two of the shapes under test cannot be expressed in a payload at
- * all — the draft-save path rejects an edge naming a node outside the request before publishing gets
- * a look. Orphaned edges are exactly what remains in storage after a node leaves a canvas, so that
- * is where the rule has to hold.</p>
- *
- * <p>Expected violations are computed by an independent oracle: reachability by repeated relaxation
- * to a fixed point, against the service's breadth-first search. Generators stay small and biased
- * toward legible shapes (a linear chain, a handful of nodes, endpoints that dangle only
- * occasionally), so a counterexample shrinks to something a person can read.</p>
- *
- * <p><b>Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5</b></p>
- */
 @Tag("flowforge")
 class GraphValidationExhaustivePropertyTest {
 
@@ -126,13 +99,6 @@ class GraphValidationExhaustivePropertyTest {
 
     // ── oracle ───────────────────────────────────────────────────────────────────────────────────
 
-    /**
-     * The violations the four rules must produce for a graph, derived independently of the service.
-     *
-     * <p>Reachability is computed by relaxing the edge set until nothing changes, rather than by the
-     * queue-driven breadth-first search the service uses, so agreement between the two is evidence
-     * rather than a tautology.</p>
-     */
     private List<String> expectedViolations(Graph graph) {
         List<String> expected = new ArrayList<>();
 
@@ -242,11 +208,6 @@ class GraphValidationExhaustivePropertyTest {
         }
     }
 
-    /**
-     * Two families, so both branches of the property get exercised: chains that are well formed by
-     * construction, and freely generated graphs that are usually broken in one way or another. The
-     * oracle, not the generator, decides which is which.
-     */
     @Provide
     Arbitrary<GraphSpec> graphs() {
         return Arbitraries.frequencyOf(
@@ -297,11 +258,6 @@ class GraphValidationExhaustivePropertyTest {
         return types.list().ofMinSize(0).ofMaxSize(MAX_NODES);
     }
 
-    /**
-     * Either a straight chain over every node — the shape a well-formed workflow has — or a freely
-     * wired handful of edges. Dangling endpoints are rare, so orphan violations arrive as a deliberate
-     * perturbation rather than dominating every generated graph.
-     */
     private Arbitrary<List<EdgeSpec>> edgeLists(int nodeCount) {
         Arbitrary<EdgeSpec> anyEdge = Combinators.combine(
                         Arbitraries.integers().between(0, Math.max(nodeCount - 1, 0)),

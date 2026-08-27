@@ -26,15 +26,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
      */
     List<RefreshToken> findAllByUserIdAndRevokedFalse(UUID userId);
 
-    /**
-     * Revoke every live refresh token belonging to a user in one statement.
-     *
-     * <p>Used when an account is deactivated (Requirement 4.1) so no existing session can be
-     * refreshed. The persistence context is flushed before and cleared after, so entities already
-     * loaded in the current transaction are not read back with a stale {@code revoked} flag.</p>
-     *
-     * @return the number of records revoked
-     */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update RefreshToken r set r.revoked = true where r.user.id = :userId and r.revoked = false")
     int revokeAllByUserId(@Param("userId") UUID userId);

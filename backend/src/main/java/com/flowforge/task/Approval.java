@@ -8,23 +8,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * The decision recorded against a task (Requirements 13.1, 13.2, 13.4).
- *
- * <p>One row per decided task: {@code approvals.task_id} is {@code UNIQUE} in
- * {@code V1__initial_schema.sql}, so the database itself refuses a second decision on the same task.
- * That matters more than it looks — a duplicate decision would call {@code advance} twice and could
- * move an instance two steps for one human action, and the constraint closes that off even under
- * concurrent requests, which an application-level check alone would not.
- *
- * <p>The approval carries no {@code instance_id}. It belongs to a task, and the task knows its
- * instance; duplicating the link would create two paths to the same fact and let them disagree.
- *
- * <p>{@link #comment} is nullable at the schema level because an approval needs no justification. A
- * rejection does (Requirement 13.2), and that rule is enforced in
- * {@link TaskService#recordDecision} where a violation can be reported as a 400 against the field
- * the caller got wrong, rather than as a constraint violation.
- */
 @Entity
 @Table(name = "approvals")
 @Getter

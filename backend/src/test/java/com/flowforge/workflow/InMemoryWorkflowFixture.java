@@ -25,15 +25,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * A real {@link WorkflowService} wired to in-memory repositories.
- *
- * <p>Same approach as {@code InMemoryUserFixture}: the repositories are Mockito mocks backed by
- * maps rather than fixed stub returns, so writes are visible to later reads and the production logic
- * (graph rewrite, payload validation, id generation, audit emission) actually runs. Identifiers are
- * assigned on save only when absent, which mirrors {@code @GeneratedValue} and lets the tests prove
- * that cloned rows really do get new ones.</p>
- */
 final class InMemoryWorkflowFixture {
 
     final Map<UUID, Workflow> workflowsById = new LinkedHashMap<>();
@@ -62,14 +53,6 @@ final class InMemoryWorkflowFixture {
     final User admin = user("Ada Lovelace", "ada@example.com", "ADMIN");
     final User manager = user("Grace Hopper", "grace@example.com", "MANAGER");
 
-    /**
-     * A fixture with no node config rules, so publishing judges structure alone.
-     *
-     * <p>That is the right default here: the structural rules and the config rules fail independently,
-     * and a test about reachability should not have to configure an approver on every node it draws to
-     * get a clean result. {@code WorkflowVersionService} treats a node type with no rule as needing no
-     * configuration, which is exactly this.
-     */
     InMemoryWorkflowFixture() {
         this(List.of());
     }
@@ -207,14 +190,6 @@ final class InMemoryWorkflowFixture {
 
     // ── graph authoring helpers ──────────────────────────────────────────────────────────────────
 
-    /**
-     * Persist a node on a version, bypassing the draft-save payload path.
-     *
-     * <p>Publishing's structural rules run against the stored rows, and some of the shapes they have
-     * to reject — an edge whose endpoint is not part of the graph — cannot be expressed in a
-     * draft-save payload at all, since that path rejects them first. Writing rows directly is the
-     * only way to set those states up.</p>
-     */
     WorkflowNode addNode(WorkflowVersion version, NodeType type) {
         WorkflowNode node = nodeRepository.save(WorkflowNode.builder()
                 .version(version)
@@ -267,11 +242,6 @@ final class InMemoryWorkflowFixture {
                 .toList();
     }
 
-    /**
-     * Drop the rows whose entity has been detached from its version's collection — the in-memory
-     * equivalent of {@code orphanRemoval = true}. Edges go before nodes, mirroring the order the
-     * foreign keys require.
-     */
     private void applyOrphanRemoval() {
         edgesById.values().removeIf(edge -> isOrphaned(edge.getVersion(), edge, WorkflowVersion::getEdges));
         nodesById.values().removeIf(node -> isOrphaned(node.getVersion(), node, WorkflowVersion::getNodes));

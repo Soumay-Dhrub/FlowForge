@@ -15,22 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * One in-flight execution of a workflow definition.
- *
- * <p>The instance is bound to a {@link WorkflowVersion} — never to a {@link
- * com.flowforge.workflow.Workflow} — and the binding is made once, at submission time, against the
- * version that was current then (Requirement 9.1). {@code workflow_version_id} is therefore mapped
- * as non-updatable: publishing a new version later moves the {@code is_current} flag, and a running
- * instance must keep executing the definition it started on (Requirement 7.7).
- *
- * <p>{@link #currentNode} plus {@link #status} are the instance's durable position. The engine
- * persists both before advancing, which is what makes an instance resumable after a crash
- * (Requirement 9.3).
- *
- * <p>{@link #branchStatus} is the per-branch completion map an AND-Join reads; it stays empty until
- * task 19 populates it (Requirements 10.1–10.3).
- */
 @Entity
 @Table(name = "workflow_instances")
 @Getter
@@ -98,16 +82,6 @@ public class WorkflowInstance {
         return status == InstanceStatus.RUNNING;
     }
 
-    /**
-     * The id of the version this instance is bound to, or {@code null} if unbound.
-     *
-     * <p>Deliberately not named {@code getWorkflowVersionId}: a JavaBean getter for an id that is
-     * not a mapped attribute makes Spring Data resolve {@code ...WorkflowVersionId} in a derived
-     * query name to this method and then fail, since Hibernate has no such attribute. Repository
-     * finders traverse the association explicitly instead — see {@link WorkflowInstanceRepository}.
-     *
-     * @return the bound version id, or {@code null}
-     */
     @Transient
     public UUID workflowVersionId() {
         return workflowVersion == null ? null : workflowVersion.getId();

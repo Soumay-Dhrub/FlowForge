@@ -9,28 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * A service for {@code AuditLogAspect} to intercept.
- *
- * <h2>Why a fixture service and not a production one</h2>
- * <p>The aspect's job is generic: match a write method on any service, work out what it changed, record it
- * once. Testing that against {@code UserService} would test {@code UserService} — its validation, its
- * password hashing, its repositories — and would only ever exercise the one shape of method that class
- * happens to have. This fixture exists to present every shape the aspect has to cope with: a create that
- * returns a DTO, an update that returns nothing, a delete that takes only an id, a method that records its
- * own entry, a read-only method, a method with no identifiable entity, and one that throws.
- *
- * <h2>Why it lives in this package</h2>
- * <p>{@code AuditLogAspect}'s pointcut excludes {@code com.flowforge.audit..*} so that auditing does not
- * audit itself. A fixture placed beside the aspect's tests would therefore never be intercepted, and the
- * tests would pass by matching nothing. {@code com.flowforge.aspectfixture} is not a subpackage of
- * {@code com.flowforge.audit}, and the class name ends in {@code Service}, so the pointcut applies exactly
- * as it does in production.
- *
- * <p>The entity type the aspect derives from this class's name is {@code Thing}, giving actions
- * {@code CREATE_THING}, {@code UPDATE_THING}, {@code DELETE_THING}, {@code APPROVE_THING} and
- * {@code REJECT_THING}.
- */
 public class ThingService {
 
     /** What a create returns: an id and a name, the minimum for the aspect to find an entity. */

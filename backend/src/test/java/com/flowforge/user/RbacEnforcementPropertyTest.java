@@ -29,25 +29,6 @@ import java.util.function.BiFunction;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Property 5: RBAC Enforcement Across All Endpoints.
- *
- * <p>For any (role, endpoint) pair on {@code /api/users} where the role is not permitted, a request
- * authenticated as that role receives 403 Forbidden; a request with no established authentication
- * receives 401 Unauthorized. Permitted pairs must not be refused.</p>
- *
- * <p>The controller is obtained from a small application context with
- * {@code @EnableMethodSecurity}, so the bean under test is the real method-security proxy and the
- * {@code @PreAuthorize} expressions are genuinely evaluated. Responses are produced through
- * {@code MockMvc} plus the real {@link GlobalExceptionHandler}, so the assertions are about HTTP
- * status codes rather than exception types.</p>
- *
- * <p>The 401 case covers a request that reaches the endpoint with no authentication in the security
- * context — which is exactly the state {@code JwtAuthenticationFilter} leaves behind for an absent,
- * expired, or malformed token (asserted in {@code JwtAuthenticationFilterTest}).</p>
- *
- * <p><b>Validates: Requirements 3.1, 3.3</b></p>
- */
 @Tag("flowforge")
 class RbacEnforcementPropertyTest {
 

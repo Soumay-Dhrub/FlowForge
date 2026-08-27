@@ -25,21 +25,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Property 2: Registration Rejects Payloads with Missing Required Fields.
- *
- * <p>For any registration payload missing at least one required field (name, email, password,
- * role, department) — absent from the JSON body or present but blank — the endpoint responds 400
- * Bad Request, names every missing field in the error list, and no User record is created.</p>
- *
- * <p>The controller is driven through a standalone {@code MockMvc} wired to the real
- * {@link GlobalExceptionHandler}, so the assertion is about the actual HTTP response rather than
- * a validator invocation. The caller is assumed already authorized: bean validation runs during
- * argument resolution, ahead of the {@code @PreAuthorize} check, so authorization is irrelevant
- * to this property and is covered by Property 5 instead.</p>
- *
- * <p><b>Validates: Requirements 1.3</b></p>
- */
 @Tag("flowforge")
 class RegistrationMissingFieldsPropertyTest {
 

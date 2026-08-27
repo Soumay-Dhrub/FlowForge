@@ -1,28 +1,5 @@
 "use client";
 
-/**
- * The workflow builder (Requirements 6.1–6.5, 7.1–7.5).
- *
- * ## Which version is edited
- * A published version is immutable and a draft save aimed at one is refused with 409, so the editor
- * targets the newest *unpublished* version. Normally there is exactly one — a workflow is created with
- * a draft, and publishing opens its successor — but the no-draft case is stated plainly rather than
- * silently editing something frozen.
- *
- * ## Node ids, and why the canvas is rebuilt after every save
- * The ids the canvas mints are payload-local correlation keys. The server discards them, assigns its
- * own, and reports those in the response; the edges of a payload resolve against the ids *in that
- * payload* and nothing else. So a second save that reused the first save's ids would name nodes the
- * server has never heard of and be rejected with 422. The canvas therefore adopts the response as its
- * new state after every save — see `builderGraphFromVersion` — and the selected node is carried across
- * by position, because the backend writes and reports nodes in payload order.
- *
- * ## Publishing
- * ADMIN only; a MANAGER is not shown a button that would answer 403. Publishing sends no graph, so it
- * publishes what is *stored* — which is why it is disabled while there are unsaved changes rather than
- * quietly publishing an older canvas. A 422 lists every violation at once, each labelled with the node
- * it names where the message carries an id.
- */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -69,12 +46,6 @@ const AUTO_PLACE_STEP_X = 190;
 const AUTO_PLACE_STEP_Y = 120;
 const AUTO_PLACE_COLUMNS = 4;
 
-/**
- * True when a batch of changes alters what a save would send.
- *
- * Selecting a node or measuring it does not change the graph, so those must not mark the canvas
- * dirty — otherwise simply clicking a node would block publishing.
- */
 function changesGraph(changes: { type: string }[]): boolean {
   return changes.some((change) => change.type !== "select" && change.type !== "dimensions");
 }
@@ -577,13 +548,6 @@ export function WorkflowBuilder({ workflowId }: { workflowId: string }) {
   );
 }
 
-/**
- * A refusal, listed rule by rule.
- *
- * Both the draft-save and publish endpoints report *every* violation at once, so they are rendered as
- * a list rather than a sentence. Where a message names a node id, the node's type is shown alongside
- * it: a designer reads "Approval", not a UUID.
- */
 function ViolationList({
   title,
   violations,

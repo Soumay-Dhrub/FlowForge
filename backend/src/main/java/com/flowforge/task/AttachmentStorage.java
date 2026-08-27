@@ -17,30 +17,12 @@ import java.nio.file.StandardOpenOption;
 import java.util.UUID;
 
 /**
- * Where attachment bytes go, and the two rules that keep that safe (Requirements 14.1, 14.2).
+ * Writes attachment bytes to disk. Metadata lives in Postgres; storage_path is relative to the root
+ * so the root can move.
  *
- * <h2>The stored name is generated, never the client's</h2>
- * <p>A multipart part carries a file name chosen by whoever is uploading. Using it to build a path is
- * the classic traversal: {@code ../../etc/cron.d/x} writes outside the root, and even a plain repeated
- * name silently overwrites someone else's document. So the name on disk is a fresh UUID plus the
- * extension implied by the <em>accepted content type</em>, and the client's name is kept only as
- * display metadata (sanitised by {@link #sanitiseFileName} down to a bare name for good measure).
- *
- * <p>Belt and braces: {@link #resolveWithin} normalises the resolved path and refuses anything that does
- * not sit under the root. Nothing should be able to reach it, which is exactly why it is there — the
- * guard costs one comparison and turns a future mistake in name handling into a 500 instead of a write
- * to an arbitrary file.
- *
- * <h2>The size limit is enforced while streaming</h2>
- * <p>{@link #store} copies through a small fixed buffer and aborts the moment the byte count passes the
- * limit, deleting the partial file. It never calls {@code getBytes()} or otherwise materialises the
- * upload, so a caller cannot turn a 10 MB limit into a heap exhaustion by lying about
- * {@code Content-Length} — a false <em>small</em> length is precisely the case a pre-check on the
- * declared size cannot catch, and the only honest count is the one taken while writing.
- *
- * <p>Files are laid out as {@code {root}/{instanceId}/{uuid}{ext}}. Sharding by instance keeps any one
- * directory to the size of one request's paperwork and makes "delete a request's files" a directory
- * removal rather than a scan.
+ * <p>Two rules keep this safe: the stored name is instanceId/UUID.ext rather than anything the client
+ * sent, and every resolved path is checked against the root to refuse traversal. Byte count is
+ * enforced while writing, so a request understating its Content-Length cannot beat the limit.
  */
 @Component
 @Slf4j
@@ -49,11 +31,6 @@ public class AttachmentStorage {
     private final Path root;
     private final long maxSizeBytes;
 
-    /**
-     * @param storagePath  root directory for attachment bytes; relative paths resolve against the
-     *                     process working directory
-     * @param maxSizeBytes the per-file limit of Requirement 14.2
-     */
     public AttachmentStorage(
             @Value("${app.attachment.storage-path:./var/attachments}") String storagePath,
             @Value("${app.attachment.max-size-bytes:10485760}") long maxSizeBytes
@@ -73,16 +50,6 @@ public class AttachmentStorage {
         return root;
     }
 
-    /**
-     * Write an upload under the root and report where it went.
-     *
-     * @param instanceId the request the file belongs to; becomes the sub-directory
-     * @param extension  the extension for the stored name, derived from the accepted content type
-     * @param content    the bytes; read once, streamed, never fully buffered
-     * @return the path relative to the root, and the byte count actually written
-     * @throws FileSizeLimitException 413 when the stream exceeds the configured limit
-     * @throws AppException           500 when the bytes cannot be written
-     */
     public StoredFile store(UUID instanceId, String extension, InputStream content) {
         String relativePath = instanceId + "/" + UUID.randomUUID() + extension;
         Path target = resolveWithin(relativePath);
@@ -136,13 +103,6 @@ public class AttachmentStorage {
         deleteQuietly(resolveWithin(relativePath));
     }
 
-    /**
-     * Resolve a relative path against the root, refusing anything that escapes it.
-     *
-     * @param relativePath path relative to the root
-     * @return the absolute, normalised path
-     * @throws AppException 500 when the path is absolute or climbs out of the root
-     */
     public Path resolveWithin(String relativePath) {
         Path resolved = root.resolve(relativePath).normalize();
         if (!resolved.startsWith(root)) {
@@ -156,18 +116,6 @@ public class AttachmentStorage {
         return resolved;
     }
 
-    /**
-     * A client-supplied file name reduced to something safe to store and show.
-     *
-     * <p>Everything up to the last path separator is dropped — both {@code /} and {@code \}, because a
-     * Windows client sends {@code C:\Users\x\report.pdf} and only the last segment is the name. Control
-     * characters go, {@code .} and {@code ..} become a placeholder, and the result is capped at the
-     * column's 255 characters. The output is display metadata only: it never takes part in building a
-     * path.
-     *
-     * @param raw the name as supplied, possibly {@code null}
-     * @return a non-blank bare file name
-     */
     public static String sanitiseFileName(String raw) {
         if (raw == null || raw.isBlank()) {
             return "attachment";
@@ -199,12 +147,6 @@ public class AttachmentStorage {
         }
     }
 
-    /**
-     * Where an upload landed and how big it turned out to be.
-     *
-     * @param relativePath path relative to the storage root, as stored in {@code storage_path}
-     * @param size         bytes actually written
-     */
     public record StoredFile(String relativePath, long size) {
     }
 }

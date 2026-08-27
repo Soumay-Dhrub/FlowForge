@@ -53,12 +53,6 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Logged out", null));
     }
 
-    /**
-     * Request a password reset link (Requirement 5.1).
-     *
-     * <p>Answers 200 with the same message whether or not the address is registered, so the
-     * endpoint cannot be used to discover which emails have accounts.</p>
-     */
     @PostMapping("/password-reset/request")
     public ResponseEntity<ApiResponse<Void>> requestPasswordReset(
             @Valid @RequestBody PasswordResetRequest request) {

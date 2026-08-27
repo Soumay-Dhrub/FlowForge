@@ -13,13 +13,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
-/**
- * Handler invoked by the security filter chain when an authenticated caller lacks the role required
- * for the requested endpoint. Keeps the 403 body in the same {@link ApiResponse} envelope the
- * {@code GlobalExceptionHandler} produces for method-security denials.
- *
- * <p><b>Requirement 3.2:</b> IF the caller's role does not have permission, THEN return 403.</p>
- */
 @Component
 @RequiredArgsConstructor
 public class RestAccessDeniedHandler implements AccessDeniedHandler {

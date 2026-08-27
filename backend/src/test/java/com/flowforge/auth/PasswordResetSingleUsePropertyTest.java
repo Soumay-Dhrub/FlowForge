@@ -34,14 +34,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Property 7: Password Reset Token is Single-Use.
- *
- * <p>For any valid password reset token, submitting it once with a new password succeeds and
- * subsequently submitting the same token again is rejected with 400 Bad Request.</p>
- *
- * <p><b>Validates: Requirements 5.3</b></p>
- */
 @Tag("flowforge")
 class PasswordResetSingleUsePropertyTest {
 
@@ -104,11 +96,6 @@ class PasswordResetSingleUsePropertyTest {
                 .as(ResetScenario::new);
     }
 
-    /**
-     * A real {@link AuthService} wired to in-memory repositories, so the production claim-then-write
-     * logic runs on every try. {@code markUsed} mirrors the conditional UPDATE in
-     * {@link PasswordResetTokenRepository}: only a row that is still unused can be claimed.
-     */
     private static final class Fixture {
 
         private final Map<String, User> usersByEmail = new HashMap<>();

@@ -20,25 +20,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Property 11: AND-Join Requires All Branches Before Advancing.
- *
- * <p>For any workflow that fans out into N parallel branches and rejoins at an AND-Join, the join
- * must not let execution through while any branch is still outstanding, and must let it through
- * exactly when the last one arrives. Completing branches in any order must give the same answer:
- * only the final arrival — whichever branch it happens to be — fires the join.</p>
- *
- * <p>The branch count and the completion order are both generated, because the two ways this rule
- * fails are a join that fires on the first arrival (barrier missing) and a join that fires only when
- * one particular branch arrives (barrier keyed on the wrong thing). Permuting the order catches the
- * second; asserting after every intermediate arrival catches the first.</p>
- *
- * <p>Assertions are made after <em>each</em> completion rather than only at the end, so a premature
- * fire is caught at the moment it happens rather than being masked by the instance completing
- * anyway once every branch is done.</p>
- *
- * <p><b>Validates: Requirements 10.2, 10.3</b></p>
- */
 @Tag("flowforge")
 class AndJoinRequiresAllBranchesPropertyTest {
 
@@ -105,15 +86,6 @@ class AndJoinRequiresAllBranchesPropertyTest {
         return ordered;
     }
 
-    /**
-     * Start → fork task → N parallel Task branches → AND-Join → End.
-     *
-     * <p>The fork is a Task node because a fan-out is registered by
-     * {@link NodeTransitions#followOutgoingEdges}, and the only caller of it is
-     * {@link WorkflowEngineService#advanceFrom} — the resume path a task decision takes. The
-     * sequential executors all take their single outgoing edge and reject several, so a fork in this
-     * engine is always "a node whose work finished and which has more than one way out".
-     */
     private static final class Fixture {
 
         private final InMemoryEngineFixture engineFixture = new InMemoryEngineFixture();

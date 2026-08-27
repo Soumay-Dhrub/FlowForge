@@ -35,21 +35,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.flowforge.support.IntegrationTestBase;
 
-/**
- * File attachments against a real PostgreSQL database (Requirements 14.1, 14.2, 14.3).
- *
- * <p>The unit and property tests drive {@code AttachmentService} over map-backed repositories, which
- * cannot show whether the {@code attachments} row Hibernate builds is one PostgreSQL will accept. That is
- * the risk worth covering here: {@code ddl-auto: validate} means booting this context at all proves the
- * entity matches the Flyway schema, and committing a row proves the column lengths, the {@code NOT NULL}s
- * and the two foreign keys are satisfied by what the service actually writes.
- *
- * <p>Assertions read state back through the repository rather than trusting the returned object, and the
- * bytes are checked on disk under the configured root — the metadata row and the file are two separate
- * effects and either could exist without the other.
- *
- * <p>Validates: Requirements 14.1, 14.2, 14.3.
- */
 class AttachmentIntegrationTest extends IntegrationTestBase {
 
     /**

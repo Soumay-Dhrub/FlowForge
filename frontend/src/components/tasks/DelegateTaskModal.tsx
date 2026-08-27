@@ -1,18 +1,5 @@
 "use client";
 
-/**
- * Hand this reviewer's work to somebody else for a period (Requirement 16.1).
- *
- * Worth being explicit in the UI about what this does, because the endpoint's path is misleading: it
- * names one task, but the effect is per-user. Every pending task the caller holds moves to the delegate,
- * and new work routes there too while the window is open. A reviewer who thought they were delegating
- * one item would be surprised, so the dialog says so and the confirmation reports how many changed
- * hands.
- *
- * The delegate list comes from `GET /api/users`, which is ADMIN-only. An EMPLOYEE therefore cannot be
- * offered a picker, so they type an id — ugly but honest, and better than a control that 403s. Widening
- * that endpoint is a backend decision, not something to work around here.
- */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { extractErrorMessage } from "@/lib/api";

@@ -18,19 +18,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Property 1: Valid Registration Always Creates a User.
- *
- * <p>For any valid registration payload (non-blank name, valid email, password of at least 8
- * characters, valid role, valid department), submitting it creates a User record whose
- * {@code password_hash} is not the plaintext password.</p>
- *
- * <p>Bcrypt strength here is 4 (see {@link InMemoryUserFixture}) so 100 tries stay fast. The
- * production work factor of 12 required by Requirement 1.4 is asserted against the
- * {@code SecurityConfig} bean in {@code UserServiceTest}.</p>
- *
- * <p><b>Validates: Requirements 1.1, 1.4</b></p>
- */
 @Tag("flowforge")
 class ValidRegistrationPropertyTest {
 

@@ -11,23 +11,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * An action item an instance is waiting on: one row per visit to a Task or Approval node
- * (Requirements 9.2, 12.1).
- *
- * <p>A task is the durable form of "execution is paused here". The engine creates it, leaves the
- * instance {@code RUNNING} on the node that produced it, and only advances when a decision arrives
- * (Requirement 13.1). So the pair (instance position, open task) is what makes a waiting workflow
- * observable rather than stalled.
- *
- * <p>{@link #assignedTo} is mandatory, matching {@code tasks.assigned_to NOT NULL}: a task nobody
- * owns can never be actioned and would silently park the instance forever, so the engine refuses to
- * create one rather than writing an unassigned row.
- *
- * <p>{@link #dueAt} is the timeout deadline (Requirement 11.1), and is null when the node configures
- * no timeout. Task 20's escalation scheduler only considers tasks whose {@code due_at} is in the
- * past, so null simply means "never escalates".
- */
 @Entity
 @Table(name = "tasks")
 @Getter

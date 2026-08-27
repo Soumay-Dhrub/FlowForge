@@ -11,14 +11,6 @@ type SelectFieldProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
   hint?: string;
 };
 
-/**
- * Labelled select with its error message programmatically associated to the control.
- *
- * The native chevron is suppressed and redrawn, because the platform default differs enough between
- * macOS, Windows and Linux that a filter bar looks assembled from parts. The element underneath is still
- * a real `<select>` — keyboard behaviour, type-ahead and the mobile picker are all worth more than a
- * custom listbox that reimplements them badly.
- */
 export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(function SelectField(
   { id, label, error, hint, className = "", children, ...selectProps },
   ref,

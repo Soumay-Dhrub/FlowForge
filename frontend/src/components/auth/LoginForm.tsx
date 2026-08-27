@@ -200,13 +200,6 @@ export function LoginForm() {
   );
 }
 
-/**
- * A labelled input with a leading icon.
- *
- * Only the email field uses it — password has its own markup for the reveal button and the Caps Lock
- * hint — but it keeps the two fields visually identical, which is the part that would drift if both were
- * written out by hand.
- */
 function Field({
   id,
   label,

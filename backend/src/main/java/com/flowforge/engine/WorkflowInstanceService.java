@@ -20,13 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Reading and cancelling workflow instances (Requirements 9.1, 20.2).
- *
- * <p>Submitting is {@link WorkflowEngineService#createInstance}'s job — an instance's first advance is
- * execution, not bookkeeping. This service is the API's view of instances: turning them into responses,
- * and stopping them.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,24 +29,11 @@ public class WorkflowInstanceService {
     private final TaskService taskService;
     private final AuditLogService auditLogService;
 
-    /**
-     * One instance in full, request payload included.
-     *
-     * @param instanceId the instance to read
-     * @return the instance
-     * @throws EntityNotFoundException 404 when no such instance exists
-     */
     @Transactional(readOnly = true)
     public WorkflowInstanceResponse getInstance(UUID instanceId) {
         return toResponse(requireInstance(instanceId));
     }
 
-    /**
-     * The requests a user has submitted, newest first — the "my requests" view (Requirement 20.2).
-     *
-     * @param userId the initiator
-     * @return their instances, newest first, without request payloads
-     */
     @Transactional(readOnly = true)
     public List<WorkflowInstanceResponse> listMyInstances(UUID userId) {
         return instanceRepository.findByInitiatedBy_IdOrderByStartedAtDesc(userId).stream()
@@ -62,18 +42,6 @@ public class WorkflowInstanceService {
                 .toList();
     }
 
-    /**
-     * Stop an instance and close the tasks anyone was still waiting on.
-     *
-     * <p>An instance that has already finished is refused rather than quietly re-cancelled: overwriting
-     * a COMPLETED status would rewrite history, and the caller asking is working from a stale view.
-     *
-     * @param instanceId the instance to cancel
-     * @param actorId    who cancelled it, for the audit trail
-     * @return the cancelled instance
-     * @throws EntityNotFoundException 404 when no such instance exists
-     * @throws AppException            409 when the instance has already reached a terminal status
-     */
     @Transactional
     public WorkflowInstanceResponse cancelInstance(UUID instanceId, UUID actorId) {
         WorkflowInstance instance = requireInstance(instanceId);
@@ -109,14 +77,6 @@ public class WorkflowInstanceService {
         return toResponse(cancelled);
     }
 
-    /**
-     * Whether a user submitted an instance — the ownership half of the access rule on the detail and
-     * cancel endpoints.
-     *
-     * @param instanceId the instance
-     * @param userId     the caller
-     * @return {@code true} when the caller is the initiator
-     */
     @Transactional(readOnly = true)
     public boolean isInitiator(UUID instanceId, UUID userId) {
         return instanceRepository.findById(instanceId)

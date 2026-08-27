@@ -1,10 +1,5 @@
 "use client";
 
-/**
- * Holds the authenticated session: tokens (via `tokenStorage`) and the user profile.
- * Navigation is intentionally left to the consuming components so this provider stays testable
- * and router-agnostic.
- */
 import {
   createContext,
   useCallback,

@@ -3,16 +3,6 @@ import api, { unwrap } from "@/lib/api";
 import { triggerBrowserDownload } from "@/lib/download";
 import type { ApiResponse, AuditLogSearchPage } from "@/types";
 
-/**
- * The search criteria of Requirement 19.3, as the filter form holds them.
- *
- * Empty strings rather than `undefined` for the unset case, so each field binds straight to a form
- * control; the blanks are dropped before the query string is built.
- *
- * `dateFrom`/`dateTo` are **calendar dates** (`2026-01-31`), which is what the endpoint parses. The
- * upper bound is inclusive server side — `dateTo=2026-01-31` covers the whole of the 31st — so the
- * client must not widen it into an instant.
- */
 export interface AuditLogFilters {
   /** Entries this user performed; a UUID, so the UI offers a picker rather than a text box. */
   userId: string;
@@ -72,16 +62,6 @@ function filterParams(filters: AuditLogFilters): Record<string, string> {
   return params;
 }
 
-/**
- * `GET /api/audit-logs` — one page of the trail, newest first (Requirement 19.3).
- *
- * Paging and filtering are the server's job. The trail is the one table in the system that only ever
- * grows, so a client that fetched it all and filtered in the browser would get slower every day and
- * would be searching a subset the moment it was capped.
- *
- * A 400 means the date range is inverted (`dateFrom` after `dateTo`); a 403 means the caller is not
- * an ADMIN. Both are left as the original Axios error for the page to place.
- */
 export async function searchAuditLogs(
   filters: AuditLogFilters = EMPTY_AUDIT_LOG_FILTERS,
   page = 0,
@@ -94,14 +74,6 @@ export async function searchAuditLogs(
   );
 }
 
-/**
- * `GET /api/audit-logs/export` — every matching entry as a CSV download (Requirement 19.4).
- *
- * Takes the same filters as the search and no page: an export exists to take everything that
- * matched. The response is `text/csv`, not the JSON envelope, so it is read as a blob and never
- * unwrapped — and it goes through the authenticated Axios instance, because a bare link would carry
- * no token and be answered 401.
- */
 export async function exportAuditLogsCsv(
   filters: AuditLogFilters = EMPTY_AUDIT_LOG_FILTERS,
 ): Promise<void> {
@@ -112,12 +84,6 @@ export async function exportAuditLogsCsv(
   triggerBrowserDownload(response.data, "audit-logs.csv");
 }
 
-/**
- * Entity kinds the trail currently records, offered as suggestions.
- *
- * Suggestions rather than a closed list: the set grows with every audited entity, and a control that
- * only permitted today's values would make tomorrow's unsearchable.
- */
 export const AUDIT_ENTITY_TYPES: readonly string[] = [
   "Attachment",
   "Comment",

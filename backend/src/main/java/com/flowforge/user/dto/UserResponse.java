@@ -3,9 +3,6 @@ package com.flowforge.user.dto;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Response DTO for User entity.
- */
 public record UserResponse(
         UUID id,
         String name,

@@ -19,18 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * User provisioning and profile management.
- *
- * <p>Responsibilities: unique-email enforcement, password hashing, role/department resolution,
- * account activation state, and emitting audit entries for every write. Authorization lives in
- * {@link UserController} via {@code @PreAuthorize} so the rules sit next to the endpoints they
- * guard and match the RBAC table in the design.</p>
- *
- * <p>Raw passwords are never logged and never stored: only the bcrypt hash produced by the
- * injected {@code PasswordEncoder} (configured at strength 12 in
- * {@link com.flowforge.auth.SecurityConfig}) reaches the database.</p>
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -44,12 +32,6 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
 
-    /**
-     * Create a user from a validated registration payload (Requirements 1.1, 1.2, 1.4, 1.5).
-     *
-     * @throws DuplicateResourceException 409 when the email is already registered
-     * @throws EntityNotFoundException    404 when the role or department does not exist
-     */
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         String email = normalizeEmail(request.email());
@@ -130,22 +112,6 @@ public class UserService {
         return userMapper.toResponse(saved);
     }
 
-    /**
-     * Deactivate or reactivate an account (Requirements 4.1, 4.3, 4.4).
-     *
-     * <p>Deactivating also revokes every live refresh token for the user, so no existing session
-     * can be refreshed. Access tokens already issued stop working because
-     * {@code JwtAuthenticationFilter} resolves the principal through
-     * {@link UserRepository#findByIdAndIsActiveTrue(UUID)} on every request (Requirement 4.2).</p>
-     *
-     * <p>The order below matters. {@link RefreshTokenRepository#revokeAllByUserId(UUID)} is a bulk
-     * update that clears the persistence context, which detaches {@code saved} — so the response and
-     * the audit snapshot are built <em>before</em> the revocation. Reading the user's lazy role or
-     * department after that point would fail, because a detached proxy has no session to initialize
-     * through.</p>
-     *
-     * @throws EntityNotFoundException 404 when no such user exists
-     */
     @Transactional
     public UserResponse setAccountStatus(UUID userId, boolean active) {
         User user = requireUser(userId);

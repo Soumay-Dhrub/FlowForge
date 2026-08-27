@@ -1,15 +1,5 @@
 "use client";
 
-/**
- * The canvas renderer for every FlowForge node type.
- *
- * One component rather than seven: the types differ in their colour, their handles and their
- * configuration, not in their behaviour on the canvas, so a single renderer keyed by `data.nodeType`
- * keeps them visually consistent and leaves one place to change.
- *
- * Handles follow what the graph allows: a Start node has no target handle and an End node no source
- * handle, so the canvas refuses connections the publish rules would only reject later.
- */
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
   NODE_TYPE_LABELS,

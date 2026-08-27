@@ -10,16 +10,6 @@ type TextFieldProps = React.InputHTMLAttributes<HTMLInputElement> & {
   hint?: string;
 };
 
-/**
- * Labelled text input with its error message programmatically associated to the field.
- *
- * The invalid state is a red border *and* a message. Border colour alone is both invisible to anyone who
- * cannot separate red from grey and useless for saying what is actually wrong, which is the part the
- * person filling in the form needs.
- *
- * Height matches Button's `md` (36px) so a field and a button on one row line up instead of missing each
- * other by a couple of pixels.
- */
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
   { id, label, error, hint, className = "", ...inputProps },
   ref,

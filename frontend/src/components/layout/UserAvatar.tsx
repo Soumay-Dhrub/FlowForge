@@ -1,12 +1,5 @@
 "use client";
 
-/**
- * The profile menu: who you are signed in as, in what role, and the way out.
- *
- * Logout clears the session through `AuthContext` (which revokes the refresh token server side)
- * and then navigates, rather than relying on `ProtectedRoute` to notice — the redirect should be
- * the deliberate consequence of signing out, not a side effect of a guard firing.
- */
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { LogOut } from "lucide-react";

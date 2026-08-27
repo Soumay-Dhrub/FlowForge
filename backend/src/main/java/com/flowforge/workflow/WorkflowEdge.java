@@ -8,15 +8,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * A directed transition between two {@link WorkflowNode}s of the same {@link WorkflowVersion}.
- *
- * <p>{@code conditionExpr} is optional; on the outgoing edges of a Condition node it holds a
- * boolean expression evaluated against the instance's request data (Requirements 6.2, 6.3).
- * Edges are read back in a deterministic order — see
- * {@link WorkflowEdgeRepository#findByVersionIdOrderByCreatedAtAscIdAsc(UUID)} — and the authored
- * order is additionally preserved in {@link WorkflowVersion#getGraphJson()}.
- */
 @Entity
 @Table(name = "workflow_edges")
 @Getter

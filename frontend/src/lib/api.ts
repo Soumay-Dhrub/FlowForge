@@ -1,13 +1,5 @@
-/**
- * Shared Axios instance for the FlowForge API.
- *
- * Responsibilities:
- *  - attach the JWT access token to every outgoing request;
- *  - on a 401, refresh the access token exactly once and replay the original request;
- *  - persist the rotated refresh token (refresh tokens are strictly single-use server side);
- *  - collapse concurrent 401s onto a single in-flight refresh, because a second refresh call
- *    using the same (already consumed) refresh token would be rejected with 401.
- */
+// Shared Axios instance. On a 401 it refreshes once and replays the request; refresh tokens are
+// single-use server side, so concurrent 401s are collapsed onto one in-flight refresh.
 import axios, {
   AxiosError,
   AxiosResponse,
@@ -16,17 +8,12 @@ import axios, {
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "@/lib/tokenStorage";
 import type { ApiResponse, TokenPair } from "@/types";
 
-/**
- * Relative by default: `next.config.mjs` rewrites `/api/:path*` onto the backend, which keeps the
- * browser on a single origin and avoids CORS entirely.
- */
+/** Relative by default: next.config.mjs rewrites /api/* to the backend, so there is no CORS. */
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 
-/** Internal request flags used to keep the refresh machinery from recursing. */
+/** Flags that keep the refresh machinery from recursing. */
 type AuthAwareConfig = InternalAxiosRequestConfig & {
-  /** Set once the request has already been replayed after a refresh. */
   _retry?: boolean;
-  /** Set on the refresh call itself so it never triggers another refresh. */
   _skipAuthRefresh?: boolean;
 };
 
@@ -144,21 +131,12 @@ export function isStatusError(error: unknown, status: number): boolean {
   return axios.isAxiosError(error) && error.response?.status === status;
 }
 
-/**
- * True for "you are authenticated, but not allowed to do this" (Requirement 3.2).
- *
- * Pages use this to draw a deliberate "not authorized" state instead of leaking a raw error: a
- * MANAGER who types `/users` in the address bar has made an understandable mistake, not hit a bug.
- */
+/** Pages use this to draw a "not authorized" state rather than surfacing a raw error. */
 export function isForbiddenError(error: unknown): boolean {
   return isStatusError(error, 403);
 }
 
-/**
- * Best available human-readable message for a failed request. The backend already returns
- * user-safe copy in `message` (for example the deliberately generic "Invalid email or password"),
- * so it is surfaced verbatim.
- */
+/** The backend's `message` is already user-safe copy, so it is surfaced verbatim. */
 export function extractErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
     const body = error.response?.data as ApiResponse<unknown> | undefined;

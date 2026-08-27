@@ -14,21 +14,6 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-/**
- * Spring Mail implementation of {@link EmailSender}, rendering templates with Thymeleaf
- * (Requirement 17.4).
- *
- * <h2>Best effort, by design</h2>
- * <p>Nothing here throws. If no {@link JavaMailSender} is present (mail auto-configuration switched
- * off), if the SMTP host refuses the message, or if a template fails to render, the failure is logged
- * and swallowed — the transaction that caused the notification has already committed and must not be
- * disturbed by a dead relay. {@link Exception} is caught rather than {@code MailException} alone
- * because template rendering and MIME assembly fail with their own types, and from the caller's point
- * of view "the mail did not go" is one outcome however it happened.
- *
- * <p>In log-only mode the recipient and subject are recorded so a developer can see that a message
- * would have gone out. Bodies are never logged: the password-reset body carries a working reset link.
- */
 @Component
 @Slf4j
 public class SpringMailEmailSender implements EmailSender {
@@ -106,17 +91,6 @@ public class SpringMailEmailSender implements EmailSender {
         }
     }
 
-    /**
-     * Render one template.
-     *
-     * <p>Package-private so the escaping guarantee can be tested directly against the real engine,
-     * without SMTP: that a workflow name or a comment containing markup comes out as text is the one
-     * property of this class where a mistake ships live HTML to an inbox.
-     *
-     * @param templateName template name without suffix, e.g. {@code email/task-assigned}
-     * @param variables    values the template reads; {@code null} treated as empty
-     * @return the rendered HTML
-     */
     String render(String templateName, Map<String, Object> variables) {
         Context context = new Context();
         if (variables != null) {

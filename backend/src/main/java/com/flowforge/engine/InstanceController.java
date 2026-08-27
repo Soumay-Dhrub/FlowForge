@@ -18,23 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Submitting requests against workflows, and reading or stopping them
- * (Requirements 9.1, 12.3, 20.2).
- *
- * <h2>Authorization</h2>
- * <p>Submitting is open to any authenticated user: raising a request is the one thing every employee
- * does, and which workflows exist is not a secret worth a role check.
- *
- * <p>Reading and cancelling are the initiator's, or a privileged role's. The expressions call
- * {@link WorkflowInstanceService#isInitiator} rather than comparing a field, because ownership lives
- * behind the instance's association and a {@code @PreAuthorize} string is the wrong place to walk an
- * object graph.
- *
- * <p>Cancelling is not restricted to the initiator alone: a manager needs to be able to stop a request
- * whose submitter has left, and an administrator needs it to clear a stuck instance. Both are recorded
- * against the actor in the audit trail (Requirement 19.1).
- */
 @RestController
 @RequiredArgsConstructor
 public class InstanceController {
@@ -42,12 +25,6 @@ public class InstanceController {
     private final WorkflowEngineService engine;
     private final WorkflowInstanceService instanceService;
 
-    /**
-     * Submit a request against a workflow's published definition (Requirement 9.1).
-     *
-     * <p>Returns 409 when the workflow has nothing published — the definition exists but does not yet
-     * accept submissions.
-     */
     @PostMapping("/api/workflows/{workflowId}/instances")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<WorkflowInstanceResponse>> submit(

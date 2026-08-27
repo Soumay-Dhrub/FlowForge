@@ -1,12 +1,5 @@
 "use client";
 
-/**
- * The node palette.
- *
- * Each entry is a button that *also* happens to be draggable. That ordering matters: a drag-only
- * palette is unusable without a pointer, so clicking an entry places the node too, at a position the
- * page chooses. The drag is the convenience; the button is the interface.
- */
 import { GripVertical } from "lucide-react";
 import { NODE_PALETTE } from "@/lib/workflowGraph";
 import type { NodeType } from "@/types";

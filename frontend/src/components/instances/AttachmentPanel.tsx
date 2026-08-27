@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * The files on a request (Requirements 14.1, 14.2, 14.3).
- *
- * Size and type are checked here before the upload starts, which is a courtesy rather than a control:
- * the server counts bytes as it writes and matches the type against its own allow-list, so a client
- * that skipped these checks would be refused anyway. Doing them first saves pushing a 40 MB file up a
- * slow connection only to be told it was too large.
- *
- * The limits are stated in the UI rather than only enforced. A reviewer who cannot see what is allowed
- * finds out by failing, which is a worse way to learn it.
- */
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Paperclip, Upload } from "lucide-react";

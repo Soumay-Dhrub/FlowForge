@@ -1,13 +1,5 @@
 package com.flowforge.auth.dto;
 
-/**
- * Response payload carrying a freshly issued token pair.
- *
- * @param accessToken  short-lived JWT access token
- * @param refreshToken long-lived refresh token (single-use; rotated on every refresh)
- * @param tokenType    always {@code Bearer}
- * @param expiresIn    access token lifetime in seconds
- */
 public record TokenResponse(
         String accessToken,
         String refreshToken,

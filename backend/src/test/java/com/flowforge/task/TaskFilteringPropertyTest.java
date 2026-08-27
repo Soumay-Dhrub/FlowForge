@@ -16,24 +16,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Task list filtering returns exactly the matching subset.
- *
- * <p>For any set of tasks with varying statuses, workflows and creation times, and any combination of
- * the optional {@code status}, {@code workflowId} and date-range narrowings, filtering must return
- * every task that satisfies all supplied narrowings and no task that does not.</p>
- *
- * <p>Both directions are asserted against an independent oracle, because the two ways filtering fails
- * are opposite and a single-direction test misses one of them: dropping a task that should have matched
- * (a reviewer never sees work assigned to them) and including one that should not (a filter that
- * silently does nothing). Checking set equality catches both.</p>
- *
- * <p>The date range is generated to straddle the tasks' timestamps rather than sitting outside them, so
- * boundary cases — a task created exactly at {@code createdFrom} or exactly at {@code createdTo} — turn
- * up rather than being generated away. Both bounds are inclusive.</p>
- *
- * <p><b>Validates: Requirements 12.1, 12.2</b></p>
- */
 @Tag("flowforge")
 class TaskFilteringPropertyTest {
 
@@ -67,15 +49,6 @@ class TaskFilteringPropertyTest {
     record Row(UUID id, TaskStatus status, UUID workflowId, Instant createdAt) {
     }
 
-    /**
-     * A filter expressed as choices rather than as values, so the generated filter can be tied to the
-     * generated task set — a workflow id nothing was created under would make every try trivially empty.
-     *
-     * @param statusIndex   index into {@link TaskStatus#values()}, or -1 for no status narrowing
-     * @param workflowIndex index into the task set's distinct workflow ids, or -1 for none
-     * @param fromOffset    seconds from the epoch for {@code createdFrom}, or -1 for none
-     * @param toOffset      seconds from the epoch for {@code createdTo}, or -1 for none
-     */
     record FilterSpec(int statusIndex, int workflowIndex, int fromOffset, int toOffset) {
 
         private TaskFilter toFilter(List<Row> rows) {
@@ -106,11 +79,6 @@ class TaskFilteringPropertyTest {
             return status() == null && workflowIndex < 0 && from() == null && to() == null;
         }
 
-        /**
-         * Whether a row matches, decided without using {@link TaskFilter} — spelled out as four
-         * independent conjuncts so agreement with the implementation is evidence rather than a
-         * restatement of it.
-         */
         private boolean matchesIndependently(Row row, List<Row> rows) {
             boolean statusOk = status() == null || status() == row.status();
             UUID workflow = workflowId(rows);

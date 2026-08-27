@@ -33,15 +33,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Property 4: Refresh Token Single-Use Enforcement.
- *
- * <p>For any valid refresh token, using it once produces a new access token and invalidates the
- * original refresh token, so that a second use of the same refresh token is rejected with 401
- * Unauthorized.</p>
- *
- * <p><b>Validates: Requirements 2.4</b></p>
- */
 @Tag("flowforge")
 class RefreshTokenSingleUsePropertyTest {
 

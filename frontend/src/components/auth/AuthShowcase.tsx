@@ -1,22 +1,3 @@
-/**
- * The panel beside the sign-in form.
- *
- * It shows a real FlowForge pipeline — Start, a condition that branches on amount, two approval paths,
- * a join and an end — with a request travelling through it. That is a deliberate choice over stock
- * illustration or an abstract gradient: this product's whole idea is that a business process becomes a
- * graph you can see, and showing one working explains it in the two seconds someone spends on a login
- * screen. It is also the same node vocabulary they will meet in the builder, so the first thing they
- * see is the thing they will use.
- *
- * Entirely decorative, so the whole panel is `aria-hidden` and hidden below `lg`. A screen reader user
- * gains nothing from a described diagram here, and on a phone the form should own the viewport rather
- * than sit under half a metre of artwork.
- *
- * The animation is CSS only — no timers, no state, no re-renders — and stops completely under
- * `prefers-reduced-motion`, which the global stylesheet enforces by collapsing durations. A perpetually
- * moving login screen is a real accessibility problem for anyone with vestibular sensitivity, and this
- * one is on screen for as long as it takes to find a password.
- */
 import { CheckCircle2, GitBranch, ShieldCheck, Zap } from "lucide-react";
 
 /** Nodes of the illustrated graph, positioned on a 320×420 viewBox. */
@@ -94,15 +75,6 @@ function Feature({
   );
 }
 
-/**
- * The graph itself.
- *
- * Edges are drawn as dashed paths whose `stroke-dashoffset` animates, which reads as movement along the
- * wire — the same visual language as a pipeline diagram. Each node then lights up on a delay matched to
- * when the pulse would reach it, so the sequence tells a story rather than blinking at random. The two
- * approval nodes share a delay because they are a genuine fan-out: in FlowForge those branches run at
- * the same time and the join waits for both.
- */
 function Pipeline() {
   return (
     <div className="relative w-full max-w-[320px]">
@@ -159,12 +131,6 @@ function Wire({ d, delay }: { d: string; delay: number }) {
   );
 }
 
-/**
- * A node card.
- *
- * Percentage positions rather than pixels, so the whole diagram scales with its container between `lg`
- * and `xl` instead of drifting away from the wires drawn in the SVG's own coordinate space.
- */
 function Node({
   label,
   type,

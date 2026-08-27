@@ -8,13 +8,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Persisted refresh token record, used to support rotation and revocation.
- *
- * <p>Maps to the {@code refresh_tokens} table created in {@code V1__initial_schema.sql}.
- * A record is created on login and on every rotation; the presented record is marked
- * {@code revoked} as soon as it is consumed, which makes refresh tokens strictly single-use.</p>
- */
 @Entity
 @Table(name = "refresh_tokens")
 @Getter

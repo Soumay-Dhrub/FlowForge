@@ -28,21 +28,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Task endpoints — a reviewer's queue and the decisions they record
- * (Requirements 12.1–12.3, 13.1–13.4).
- *
- * <h2>Authorization</h2>
- * <p>Both endpoints are open to any authenticated user, because a task list is self-service: every
- * employee has one. The scoping, not the role, is what protects the data — {@code GET /api/tasks}
- * answers with the caller's own tasks and an EMPLOYEE cannot ask for anyone else's, while ADMIN and
- * MANAGER may pass {@code assignedTo} to look across queues (Requirement 3.1).
- *
- * <p>Deciding a task is checked on ownership rather than on role: {@link TaskService#recordDecision}
- * refuses a task that is not the caller's with 403. A privileged role does not override that — an
- * approval has to be attributable to the person who actually made it, and letting an administrator
- * record someone else's decision would put a false name on the audit trail (Requirement 19.1).
- */
 @RestController
 @RequestMapping("/api/tasks")
 @RequiredArgsConstructor
@@ -50,15 +35,6 @@ public class TaskController {
 
     private final TaskService taskService;
 
-    /**
-     * The caller's tasks, newest first, optionally narrowed (Requirements 12.1, 12.2, 12.3).
-     *
-     * @param status      only tasks in this status
-     * @param workflowId  only tasks of instances of this workflow
-     * @param createdFrom only tasks raised at or after this instant
-     * @param createdTo   only tasks raised at or before this instant
-     * @param assignedTo  whose queue to read; privileged roles only, and {@code all} for every task
-     */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<TaskResponse>>> listTasks(
@@ -87,12 +63,6 @@ public class TaskController {
         return ResponseEntity.ok(ApiResponse.success(taskService.getTask(id)));
     }
 
-    /**
-     * Record a decision and resume the instance (Requirements 13.1, 13.2, 13.3).
-     *
-     * <p>Rejecting without a comment returns 400; deciding someone else's task returns 403; deciding an
-     * already-decided task returns 409.
-     */
     @PatchMapping("/{id}/decision")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<TaskResponse>> recordDecision(
@@ -104,19 +74,6 @@ public class TaskController {
         return ResponseEntity.ok(ApiResponse.success("Decision recorded", decided));
     }
 
-    /**
-     * Delegate the caller's pending tasks for a period (Requirements 16.1, 16.2).
-     *
-     * <p>The path names a task of the caller's — the one they were looking at when they decided to hand
-     * work over — and it is what authorises the request. The <em>effect</em> is the caller's whole pending
-     * queue, as Requirement 16.1 specifies, plus a delegation record so work assigned later in the window
-     * is routed too. {@code reassignedTaskIds} in the response says exactly which tasks moved, so the
-     * wider effect is never a surprise.
-     *
-     * <p>Open to any authenticated user: anyone who can hold a task can be away. Delegating from a task
-     * that is not the caller's is 403; a self-delegation or a nonsensical window is 400; an overlapping
-     * delegation or one that would loop is 409.
-     */
     @PostMapping("/{id}/delegate")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<DelegationResponse>> delegate(
@@ -130,14 +87,6 @@ public class TaskController {
                 delegation));
     }
 
-    /**
-     * Whose tasks to list.
-     *
-     * <p>Defaults to the caller. A privileged role may name another user, or {@code all}; an
-     * unprivileged caller asking for either is silently scoped back to themselves rather than refused,
-     * because the honest answer to "show me everyone's tasks" for an employee is their own list, and a
-     * 403 would confirm that other queues exist to probe.
-     */
     private UUID resolveScope(String assignedTo, UUID callerId, Authentication authentication) {
         if (assignedTo == null || assignedTo.isBlank() || !isPrivileged(authentication)) {
             return callerId;

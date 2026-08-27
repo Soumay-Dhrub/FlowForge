@@ -1,24 +1,5 @@
 "use client";
 
-/**
- * Workflow detail: metadata plus the version history with publish timestamps and author
- * (Requirement 8.3), and the actions available on a version.
- *
- * Two decisions worth stating, because both are about not inventing behaviour:
- *
- * 1. "View version" expands the stored graph in place. There is no read-only canvas yet (that is
- *    task 35), and the version response already carries its nodes and edges, so the honest thing is
- *    to show what is there rather than link to a page that cannot render it.
- * 2. There is no "set as current draft" action. No endpoint does that, and publishing already opens
- *    a successor draft that deep-copies what was published — so the operation is either redundant or
- *    fabricated. What the API really offers is `POST /api/workflows/{id}/clone` with a
- *    `sourceVersionId`, which copies an old version into a *new* workflow. That is offered here under
- *    that exact description, so nobody presses it expecting this workflow's draft to change.
- *
- * Publishing is ADMIN only. A MANAGER is not shown a button that would answer 403; when a publish is
- * refused with 422 every structural violation is listed at once, because that is how the endpoint
- * reports them and a designer needs the whole list.
- */
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

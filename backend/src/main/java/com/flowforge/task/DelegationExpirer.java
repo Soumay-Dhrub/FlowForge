@@ -14,29 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Closing one expired delegation, transactionally (Requirement 16.3).
- *
- * <p>Split from {@link DelegationExpiryJob} for the same reason {@code TaskEscalator} is split from
- * {@code EscalationScheduler}: {@code @Transactional} is applied by a proxy, so a scheduler calling its
- * own annotated method would bypass the proxy and run with no transaction — silently, because
- * {@code this.expire(...)} looks perfectly ordinary. Putting the transactional work in a collaborator
- * makes the boundary real.
- *
- * <p>{@link Propagation#REQUIRES_NEW} gives each delegation its own transaction, so one unresolvable user
- * does not roll back the delegations already closed in the same sweep.
- *
- * <h2>What expiry does and does not do</h2>
- * <p>It flips {@code is_active} and records the event. It does <em>not</em> move tasks back. Requirement
- * 16.3 restores <em>routing</em>, and routing is exactly what this restores: with no active delegation,
- * {@link DelegationRouter} leaves new assignments with the original user. Tasks the delegate already took
- * on stay with the delegate, because they are theirs to finish — pulling a half-reviewed approval back out
- * of someone's queue at midnight would be a worse surprise than leaving it, and the delegator can be
- * reassigned individually if they want it back.
- *
- * <p>Routing does not depend on this job having run: {@link Delegation#coversInstant} checks the window as
- * well as the flag, so a delegation stops redirecting the moment it ends even if the sweep is late.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -46,16 +23,6 @@ public class DelegationExpirer {
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
 
-    /**
-     * Close one delegation whose window has passed.
-     *
-     * <p>Re-read and re-checked inside the transaction, because it may have been closed by another sweep
-     * between the query and this call.
-     *
-     * @param delegationId the delegation to close
-     * @param now          the sweep's reference time, so every delegation in one sweep judges "past" alike
-     * @return {@code true} when it was closed, {@code false} when it no longer needed closing
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean expire(UUID delegationId, Instant now) {
         Delegation delegation = delegationRepository.findById(delegationId).orElse(null);
@@ -87,12 +54,6 @@ public class DelegationExpirer {
         return true;
     }
 
-    /**
-     * Tell the delegator their work comes back to them, and the delegate that it stops arriving.
-     *
-     * <p>Best effort: a notification failure must not roll back an expiry, or the delegation would be
-     * retried on every sweep forever.
-     */
     private void notifyBothParties(Delegation delegation) {
         try {
             notificationService.notify(

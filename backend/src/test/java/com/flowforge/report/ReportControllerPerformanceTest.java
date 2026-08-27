@@ -32,14 +32,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 
-/**
- * HTTP behaviour of the performance endpoint, including the CSV export (Requirements 21.4, 21.5).
- *
- * <p>Role restrictions are covered by {@link ReportPerformanceRbacTest}; what matters here is content
- * negotiation — that {@code format=csv} produces a download with the right headers and a well-formed
- * body, that {@code format=json} produces the envelope, and that an unknown format is refused rather
- * than quietly answered in JSON.
- */
 class ReportControllerPerformanceTest {
 
     private static final Instant DAY = Instant.parse("2024-06-01T09:00:00Z");

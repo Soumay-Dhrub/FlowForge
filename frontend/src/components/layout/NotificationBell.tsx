@@ -1,15 +1,5 @@
 "use client";
 
-/**
- * The notification bell: an unread badge that keeps itself current, and a dropdown listing the
- * caller's notifications which marks one read on click (Requirements 17.1, 18.1, 18.3).
- *
- * POLLING SPLIT (deliberate): the badge polls `GET /api/notifications/unread-count` every 30 s,
- * while the list is fetched only while the dropdown is open (and refreshed on the same 30 s beat
- * for as long as it stays open). Polling the full list every 30 s just to read a number off it
- * would grow the cost of an idle tab with the size of the inbox, and every payload it pulled would
- * be discarded unread. The two share nothing but the caches the optimistic update below patches.
- */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Loader2 } from "lucide-react";
 import {

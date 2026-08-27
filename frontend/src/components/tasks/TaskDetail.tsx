@@ -1,23 +1,5 @@
 "use client";
 
-/**
- * Task detail: what is being decided, and the decision (Requirements 12.1, 13.1, 13.2).
- *
- * The task itself only carries routing metadata — workflow, node, status, dates. The substance of the
- * request is the instance's `requestData`, so it is fetched separately and rendered generically: the
- * payload is an open map defined by whatever form started the workflow, and assuming keys here would
- * mean showing nothing for every workflow that does not happen to match.
- *
- * `GET /api/instances/{id}` is restricted to the initiator or a privileged role, so an EMPLOYEE
- * deciding a task on someone else's request is answered 403. That is a missing *section*, not a broken
- * page: the decision form still works, because deciding is checked on task ownership, not on being
- * able to read the request.
- *
- * <p>Attachments and the discussion sit below the decision, and both are restricted to participants of
- * the instance. They are rendered only when the instance itself loaded: a 403 there means the caller is
- * not a participant, so those endpoints would refuse them too, and offering the controls anyway would
- * invite an error instead of explaining one.
- */
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -258,12 +240,6 @@ export function TaskDetail({ taskId }: { taskId: string }) {
   );
 }
 
-/**
- * The submitted payload, rendered without assuming its shape.
- *
- * Scalars are printed as themselves; nested objects and arrays are shown as formatted JSON rather than
- * flattened, because inventing a layout for an unknown structure risks hiding part of it.
- */
 function RequestData({ data }: { data: Record<string, unknown> | null }) {
   const entries = Object.entries(data ?? {});
 
@@ -302,13 +278,6 @@ function RequestValue({ value }: { value: unknown }) {
   return <>{String(value)}</>;
 }
 
-/**
- * What is shown instead of the form.
- *
- * Three genuinely different situations, told apart rather than collapsed into one grey box: the task
- * has been decided, it is still open but belongs to somebody else, or it is closed without a decision
- * (cancelled with its instance, or reassigned away).
- */
 function RecordedDecision({ task, mine }: { task: Task; mine: boolean }) {
   if (task.decision) {
     return (

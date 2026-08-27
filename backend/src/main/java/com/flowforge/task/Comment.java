@@ -9,25 +9,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * A remark posted on a request (Requirements 15.1, 15.2, 15.3).
- *
- * <h2>Threading, one level deep</h2>
- * <p>A comment with no {@link #parent} is top-level; one with a parent is a reply to it
- * (Requirement 15.1). Replies to replies are refused: a decision thread is a conversation, and arbitrary
- * nesting turns it into something a reviewer has to navigate rather than read. One level expresses
- * "answering that point" — which is the whole of what the requirement asks for — while keeping the read
- * model a list of parents each holding its replies, in the order both were written (Requirement 15.2).
- *
- * <p>A reply must belong to the same request as its parent. {@code CommentService} enforces that, because
- * a foreign key cannot: {@code parent_comment_id} only says the parent exists, not that it is part of this
- * conversation, and without the check a reply could quote a comment from a request its author cannot even
- * read.
- *
- * <p>No {@code updated_at} column, and none wanted. A comment is a statement someone made at a point in a
- * decision process; silently editable history would undermine the audit trail the platform exists to keep
- * (Requirement 19.1). Correcting yourself means posting again.
- */
 @Entity
 @Table(name = "comments")
 @Getter
@@ -54,12 +35,6 @@ public class Comment {
     @Column(name = "body", nullable = false, columnDefinition = "text")
     private String body;
 
-    /**
-     * The comment this one replies to, or {@code null} for a top-level comment.
-     *
-     * <p>Not updatable: moving a reply under a different parent would rewrite who appeared to be
-     * answering whom, which is precisely the history this table exists to preserve.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_comment_id", updatable = false)
     private Comment parent;

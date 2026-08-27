@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * Create-user dialog (Requirement 1.1).
- *
- * The role and department options come from `GET /api/roles` and `GET /api/departments`, so nothing
- * here hard-codes a seeded UUID. Client-side validation mirrors the server's constraints — name,
- * valid email, password of at least 8 characters, a role and a department — so the obvious mistakes
- * are caught before a round trip, but the server remains the authority.
- *
- * A duplicate email comes back as 409 and is reported *on the email field*, because that is the one
- * field the person has to change. Everything else surfaces as a form-level error.
- */
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";

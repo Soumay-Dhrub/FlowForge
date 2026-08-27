@@ -31,15 +31,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Workflow performance metrics (Requirements 21.1, 21.2, 21.3, 21.4).
- *
- * <p>These tests pin down the measurement definitions the requirement leaves open — which instances an
- * average is taken over, what a node's dwell time is measured between, what the rejection rate divides
- * by, and what an empty population reports. Property 16 checks the arithmetic across many inputs; these
- * check the specific decisions, because an implementation can be arithmetically perfect over the wrong
- * population.
- */
 class ReportServiceWorkflowPerformanceTest {
 
     private static final Instant DAY = Instant.parse("2024-06-01T09:00:00Z");

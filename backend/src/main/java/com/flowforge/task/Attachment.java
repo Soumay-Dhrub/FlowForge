@@ -9,25 +9,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * A file that travels with a request (Requirements 14.1, 14.2, 14.3).
- *
- * <p>Metadata only. The bytes live on the configured storage path and this row points at them through
- * {@link #storagePath}, which is <b>relative to the storage root</b> — never absolute. Storing it
- * relative means the root can move (a different volume mount, a different container) without a data
- * migration, and it keeps a database dump from advertising the host's filesystem layout.
- *
- * <p>{@link #fileName} is the name the uploader's browser sent, sanitised down to a bare file name for
- * display and download only. It is deliberately <em>not</em> what the file is called on disk: the name
- * on disk is generated (see {@code AttachmentStorage}), so a client-supplied name cannot influence
- * where bytes land or overwrite an existing file.
- *
- * <p>{@link #contentType} is the type the upload was accepted as — the declared type, confirmed
- * against the bytes' signature — so a later download can serve it back without re-sniffing.
- *
- * <p>There is no {@code updated_at}: an attachment is written once. Replacing a document means
- * uploading a new one, which keeps the request's paper trail intact (Requirement 19.1).
- */
 @Entity
 @Table(name = "attachments")
 @Getter

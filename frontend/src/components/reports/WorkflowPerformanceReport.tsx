@@ -1,20 +1,5 @@
 "use client";
 
-/**
- * Workflow performance analytics (Requirements 21.1–21.5). ADMIN and MANAGER only.
- *
- * <h2>Null is not zero</h2>
- * The average approval time and the rejection rate come back `null` when no instance qualified, and
- * that null is rendered as "No data" rather than coerced. "Requests are approved instantly" and
- * "nothing has been decided" look identical once a null becomes a 0, and only one of them is a claim
- * this page is entitled to make. The counts alongside them are shown as real zeros, because zero is
- * the true count.
- *
- * <h2>Dates</h2>
- * The filters are calendar dates and are sent as calendar dates. The endpoint parses them as
- * `LocalDate` and answers 400 for a full instant, so unlike the task queue they are not widened into
- * `toISOString()` bounds.
- */
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -42,12 +27,6 @@ const REPORTS_ROLE_MESSAGE = "Only administrators and managers can view workflow
 /** The text a metric with no population behind it shows. Never a zero. */
 const NO_DATA_LABEL = "No data";
 
-/**
- * One KPI figure.
- *
- * `value` is `null` for "there is no such number", which is a different state from a value of zero
- * and is styled and worded differently on purpose.
- */
 function MetricCard({
   label,
   value,

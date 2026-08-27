@@ -25,18 +25,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.flowforge.support.IntegrationTestBase;
 
-/**
- * Draft saves against a real PostgreSQL database.
- *
- * <p>The unit tests drive {@link WorkflowService} through in-memory repositories, which cannot show
- * what the JPA persistence context does at flush time. Rewriting a draft's graph deletes the
- * previous nodes and edges and inserts new ones in one transaction, and whether that flushes cleanly
- * depends on the entity lifecycle and on statement ordering against real foreign keys and NOT NULL
- * constraints. Only a real database can answer that, so these tests use Testcontainers and let each
- * service call run in — and commit — its own transaction, exactly as an HTTP request would.
- *
- * <p>Validates: Requirements 6.2, 6.5.
- */
 class WorkflowDraftSaveIntegrationTest extends IntegrationTestBase {
 
     @Autowired

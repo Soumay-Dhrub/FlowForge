@@ -2,14 +2,6 @@
 
 import type { LucideIcon } from "lucide-react";
 
-/**
- * A surface. Panels, tables and forms all sat on hand-written `rounded-lg border bg-white` strings that
- * had drifted apart; this is the one definition.
- *
- * Border plus a whisper of shadow rather than shadow alone: on the grey page background a borderless
- * card's edge disappears at low brightness, and this interface will be used on cheap monitors in offices
- * with the blinds open.
- */
 export function Card({
   as: Tag = "div",
   padded = true,
@@ -56,13 +48,6 @@ export function CardHeader({
   );
 }
 
-/**
- * A single figure — pending tasks, total volume, rejection rate.
- *
- * `value` is a node rather than a string so a caller can render an em dash for "no data". That case is
- * the reason this exists: a metric with nothing behind it must not be shown as zero, because zero is a
- * measurement and "we have not measured this" is not.
- */
 export function StatCard({
   label,
   value,

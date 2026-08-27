@@ -1,12 +1,5 @@
 "use client";
 
-/**
- * The workflow table (Requirements 8.1, 8.2, 8.3 entry point).
- *
- * Search is served by the backend's `?name=` filter rather than by filtering the rows in hand: the
- * client only holds what the server sent, so a client-side filter would quietly search a subset.
- * Keystrokes are debounced so typing a word is one request, not one per letter.
- */
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,13 +26,6 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 const COLUMNS = ["Name", "Status", "Created by", "Last updated", "Actions"] as const;
 
-/**
- * How a definition's lifecycle reads.
- *
- * ARCHIVED is warning rather than neutral: an archived definition still has running instances behind it,
- * so it is not simply gone and should not look it. DRAFT is neutral — unpublished is the normal state of
- * something being written, not a problem.
- */
 const STATUS_TONES: Record<Workflow["status"], BadgeTone> = {
   DRAFT: "neutral",
   ACTIVE: "success",

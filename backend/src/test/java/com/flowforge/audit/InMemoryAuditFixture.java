@@ -18,16 +18,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * A real {@link AuditLogAspect} applied to a real service, over an in-memory audit repository.
- *
- * <p>{@link AspectJProxyFactory} is what makes this a test of the aspect rather than of a method called
- * directly: the pointcut is matched by AspectJ against the target class exactly as Spring does at runtime,
- * so a pointcut that matches nothing fails the tests instead of quietly passing them.
- *
- * <p>{@link ThingService} is not proxied by Spring here, which means calls between its own methods would not
- * be intercepted — the same self-invocation limit the aspect documents, preserved rather than papered over.
- */
 final class InMemoryAuditFixture {
 
     /** Every entry written, in order. */

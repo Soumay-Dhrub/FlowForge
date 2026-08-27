@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * The optional condition expression on an edge (Requirements 6.2, 6.3).
- *
- * Every edge may carry one, so the dialog is offered for all of them rather than only for a Condition
- * node's edges — the engine reads `condition_expr` wherever it finds it. Leaving it blank clears the
- * condition, which is how an unconditional fallback branch is expressed.
- *
- * The expression is not validated here. It is SpEL, evaluated server side, and publishing already
- * reports an expression that will not parse as a violation naming the edge — a second, weaker parser
- * in the browser would only disagree with the real one.
- */
 import { useEffect, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";

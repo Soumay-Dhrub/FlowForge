@@ -9,14 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Hand-written {@link UserService} double that records the calls it receives.
- *
- * <p>Used by the controller-level property tests, where the subject is the HTTP and authorization
- * behaviour rather than the service logic. It is written by hand rather than mocked because the
- * pinned Mockito/Byte Buddy versions cannot instrument concrete classes on this JDK — mocks of
- * interfaces (the repositories) still work and are used elsewhere.</p>
- */
 class RecordingUserService extends UserService {
 
     static final UserResponse DUMMY = new UserResponse(

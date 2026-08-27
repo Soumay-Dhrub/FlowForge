@@ -29,24 +29,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.flowforge.support.IntegrationTestBase;
 
-/**
- * Instances against a real PostgreSQL database.
- *
- * <p>Two things cannot be shown with in-memory repositories. The first is that
- * {@link WorkflowInstance} actually matches {@code workflow_instances} as Flyway creates it: the
- * application runs with {@code spring.jpa.hibernate.ddl-auto: validate}, so a wrong column name, a
- * wrong nullability or a JSONB column mapped as text fails startup rather than a query — and booting
- * the context here is that check. The second is that the instance genuinely round-trips: the
- * {@code request_data} and {@code branch_status} JSONB columns, the enum written as a string against
- * the table's {@code CHECK} constraint, and the version binding declared non-updatable all have to
- * behave at flush time, not just in the entity.
- *
- * <p>Each service call runs in — and commits — its own transaction, exactly as an HTTP request
- * would, and every assertion reads back through the repository rather than trusting the object the
- * service returned.
- *
- * <p>Validates: Requirements 9.1, 9.3.
- */
 class WorkflowInstanceIntegrationTest extends IntegrationTestBase {
 
     @Autowired
@@ -127,11 +109,6 @@ class WorkflowInstanceIntegrationTest extends IntegrationTestBase {
                 .containsEntry("requester", Map.of("name", "Ada Lovelace", "department", "Engineering"));
     }
 
-    /**
-     * A publish after submission moves the {@code is_current} flag; the instance keeps the definition
-     * it started on, which the non-updatable mapping has to enforce through a real flush
-     * (Requirements 9.1, 7.7).
-     */
     @Test
     void aLaterPublishDoesNotRebindAnExistingInstance() {
         WorkflowResponse workflow = createWorkflow("Expense Approval");
@@ -170,12 +147,6 @@ class WorkflowInstanceIntegrationTest extends IntegrationTestBase {
                 new CreateWorkflowRequest(name, "Approve expenses over 100"), actorId);
     }
 
-    /**
-     * Publish a Start → End graph onto the workflow's open draft and return the published version id.
-     *
-     * <p>Deliberately the smallest graph that passes publish validation and needs no node config, so
-     * the test exercises the engine and the schema rather than any one executor's settings.
-     */
     private UUID publishStartToEnd(WorkflowResponse workflow) {
         UUID draftId = versionRepository
                 .findFirstByWorkflowIdAndIsPublishedFalseOrderByVersionNumberDesc(workflow.id())

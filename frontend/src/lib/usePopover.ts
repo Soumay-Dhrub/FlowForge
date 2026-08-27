@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * Open/closed state for a disclosure popup (the notification bell, the profile menu) together with
- * the keyboard and pointer behaviour a popup owes its users.
- *
- * Deliberately *not* a focus trap. These are menus attached to a button, not modal dialogs: the
- * page behind them stays usable, so trapping focus would strand keyboard and screen-reader users
- * inside a panel they did not ask to be confined to. Escape closes and moves focus back to the
- * trigger, which is what returns them to where they were.
- */
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface Popover<T extends HTMLElement = HTMLDivElement> {

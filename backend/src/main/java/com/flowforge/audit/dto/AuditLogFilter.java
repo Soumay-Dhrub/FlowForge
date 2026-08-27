@@ -8,19 +8,6 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
-/**
- * The search criteria of Requirement 19.3: by user, entity type, date range, or action.
- *
- * <p>Every field is optional, and an absent field means "do not filter on this" rather than "match
- * nothing" — an unfiltered search is the useful default for an investigator who does not yet know what
- * they are looking for.
- *
- * @param actorId    only entries this user performed
- * @param entityType only entries about this kind of entity, e.g. {@code Task}; matched case-insensitively
- * @param action     only entries with this action, e.g. {@code APPROVE_TASK}; matched case-insensitively
- * @param from       earliest entry to include, inclusive
- * @param to         latest entry to include, inclusive
- */
 public record AuditLogFilter(
         UUID actorId,
         String entityType,
@@ -40,21 +27,6 @@ public record AuditLogFilter(
         return new AuditLogFilter(null, null, null, null, null);
     }
 
-    /**
-     * Build a filter from query parameters.
-     *
-     * <p>Dates arrive as calendar days and are interpreted in UTC, {@code dateTo} inclusive: a search
-     * for {@code dateTo=2024-06-01} that excluded everything after midnight would silently omit the
-     * whole day the investigator asked about. So the upper bound becomes the last instant of that day.
-     *
-     * @param actorId  optional actor
-     * @param entityType optional entity type; blank treated as absent
-     * @param action     optional action; blank treated as absent
-     * @param dateFrom   optional first day to include, interpreted in UTC
-     * @param dateTo     optional last day to include, interpreted in UTC
-     * @return the filter
-     * @throws AppException 400 when the range is inverted
-     */
     public static AuditLogFilter of(
             UUID actorId,
             String entityType,
@@ -75,16 +47,6 @@ public record AuditLogFilter(
                         .minusNanos(1));
     }
 
-    /**
-     * Clamp a requested page size into the permitted range.
-     *
-     * <p>A ceiling rather than an honoured request: the search endpoint is the read side of a table that
-     * grows without bound, and {@code size=1000000} should not be a way to ask the server to build a
-     * million-row JSON array. Callers who genuinely want everything use the CSV export, which streams.
-     *
-     * @param requested the requested size, or {@code null} for the default
-     * @return a size between 1 and {@link #MAX_PAGE_SIZE}
-     */
     public static int pageSize(Integer requested) {
         if (requested == null || requested <= 0) {
             return DEFAULT_PAGE_SIZE;

@@ -22,21 +22,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * JWT authentication filter that intercepts requests and validates JWT tokens.
- * 
- * <p>This filter:</p>
- * <ul>
- *   <li>Extracts the JWT token from the Authorization header</li>
- *   <li>Validates the token signature and expiry</li>
- *   <li>Verifies the user is active in the database</li>
- *   <li>Sets the SecurityContext with the authenticated user</li>
- * </ul>
- * 
- * <p>If the token is invalid or the user is inactive, the request proceeds
- * without authentication, allowing Spring Security to reject it based on
- * the endpoint's access rules.</p>
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -97,14 +82,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Extract JWT token from the Authorization header.
-     * 
-     * <p>Expected format: "Bearer {token}"</p>
-     * 
-     * @param request the HTTP request
-     * @return the JWT token string, or null if not present or malformed
-     */
     private String extractJwtFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {

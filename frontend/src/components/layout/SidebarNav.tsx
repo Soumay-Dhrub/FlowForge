@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * Sidebar navigation. Links the caller's role cannot use are not rendered at all rather than
- * disabled: a MANAGER has no business seeing a greyed-out "Users" entry advertising a page that
- * would answer them 403.
- *
- * This is presentation, not authorization. The API enforces RBAC on every request
- * (Requirement 3.2), so hiding a link removes a dead end from the UI — it does not protect the
- * endpoint behind it.
- */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {

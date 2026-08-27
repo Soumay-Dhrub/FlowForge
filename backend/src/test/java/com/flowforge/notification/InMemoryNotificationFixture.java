@@ -18,14 +18,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * The real notification subsystem wired to in-memory repositories and a recording mailer.
- *
- * <p>Same approach as the other fixtures in this suite: the repositories are Mockito mocks backed by
- * maps, so a write is visible to the next read and the production logic — the preference lookup, the
- * catalog defaults, the payload allowlist, the transaction-timing decision — actually runs. Only SMTP
- * and Thymeleaf are absent; template rendering is tested separately against the real engine.
- */
 final class InMemoryNotificationFixture {
 
     final Map<UUID, User> usersById = new LinkedHashMap<>();

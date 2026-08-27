@@ -11,14 +11,6 @@ type SubmitButtonProps = {
   fullWidth?: boolean;
 };
 
-/**
- * Submit button with a visible, announced busy state.
- *
- * Kept separate from `Button` on purpose: this one is the terminal action of a form and is the only
- * button that should be full width by default. It stays `disabled` while submitting — unlike `Button`,
- * which keeps focus — because a double-submitted form is a duplicate decision or a duplicate user, and
- * that is worse than briefly losing focus on the control you just pressed.
- */
 export function SubmitButton({
   isSubmitting,
   pendingLabel,

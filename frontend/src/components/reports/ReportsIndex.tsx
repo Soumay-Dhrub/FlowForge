@@ -1,12 +1,5 @@
 "use client";
 
-/**
- * The way in to the per-workflow reports (Requirement 21.1). ADMIN and MANAGER only.
- *
- * The performance endpoint reports on one workflow at a time, so a report URL needs a workflow id
- * from somewhere. This is that somewhere: without it the analytics pages would only be reachable by
- * typing a UUID.
- */
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, BarChart3 } from "lucide-react";

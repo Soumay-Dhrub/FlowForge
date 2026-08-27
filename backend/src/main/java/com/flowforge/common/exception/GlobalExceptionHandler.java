@@ -46,14 +46,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
-    /**
-     * An upload the servlet container refused before application code saw it (Requirement 14.2).
-     *
-     * <p>{@code spring.servlet.multipart.max-file-size} stops Tomcat reading past its own ceiling, which
-     * is what keeps a hostile multi-gigabyte body from reaching the heap at all. The status is the same
-     * 413 {@code AttachmentService} returns, so a client cannot tell — and does not need to tell — which
-     * of the two limits stopped it.
-     */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<Void>> handleUploadTooLarge(MaxUploadSizeExceededException ex) {
         log.warn("Upload rejected by the container's multipart limit: {}", ex.getMessage());
@@ -73,15 +65,6 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Authentication required"));
     }
 
-    /**
-     * A request parameter or path variable that cannot be converted to the type the handler declares —
-     * a malformed UUID, or a date in the wrong format.
-     *
-     * <p>This is the caller's mistake, so it is 400. Without the handler it fell through to the
-     * catch-all and came back as 500, which told a client its own bad input was a server fault and
-     * left them nothing to correct. The parameter name is named; the raw value is not echoed, since
-     * reflecting caller-supplied text into a response is how reflected-injection bugs start.
-     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         String expected = ex.getRequiredType() == null ? "the expected type"
@@ -92,14 +75,6 @@ public class GlobalExceptionHandler {
                 List.of(new ApiResponse.FieldError(ex.getName(), "must be a valid " + expected))));
     }
 
-    /**
-     * A request body that could not be parsed or bound — malformed JSON, or a value of the wrong shape
-     * for the field it is given to.
-     *
-     * <p>400 for the same reason as above. The parser's own message is deliberately not forwarded: it
-     * names internal class names and field paths, which tells a caller about the server's internals
-     * without helping them fix the request.
-     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException ex) {
         log.debug("Rejected request: unreadable body ({})", ex.getMostSpecificCause().getMessage());
@@ -117,14 +92,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Resource not found"));
     }
 
-    /**
-     * Anything unclassified.
-     *
-     * <p>The response stays deliberately vague — an internal failure must not leak a stack trace, a
-     * SQL statement or a host name to the caller. The log does not: a 500 that leaves no trace on the
-     * server is undebuggable, and the whole point of reaching this handler is that nobody predicted
-     * the failure, so the stack trace is the only evidence there is.
-     */
+    /** Detail goes to the log, never to the client: the response must not leak internals. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
         log.error("Unhandled {} escaped to the API boundary: {}",

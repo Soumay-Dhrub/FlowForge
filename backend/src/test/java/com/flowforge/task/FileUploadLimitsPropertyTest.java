@@ -31,32 +31,6 @@ import static com.flowforge.task.InMemoryAttachmentFixture.upload;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Property 13: File Upload Enforces Size and Type Limits.
- *
- * <p>For any upload, exceeding the configured size limit must yield 413 and a type that is not on the
- * allowlist must yield 415 — and neither answer may depend on who is uploading. The uploader is
- * therefore generated as well as the file: their role (EMPLOYEE, MANAGER, ADMIN) and their relationship
- * to the request (initiator, or assignee of a task on it) vary independently of the file, because a
- * limit that a manager can talk their way past is not a limit.
- *
- * <p>Refusal is asserted as the absence of effects, not just as a status code. A 413 returned after the
- * bytes were written, or a 415 with a metadata row already saved, would satisfy the letter of
- * Requirements 14.2 and 14.3 while leaving exactly the file the platform said it would not take. So every
- * refusal also checks that the storage directory is empty and no attachment row exists.
- *
- * <p>Sizes are generated around the boundary rather than uniformly: the limit itself, one byte under and
- * one byte over are where an off-by-one lives, and a random 10 MB draw would almost never land there.
- * Types include both the disallowed kind (a plausible MIME type absent from the allowlist) and the
- * spoofed kind (an allowed type declared over bytes of a different one), since the second is what an
- * allowlist checked against the client's header alone would wave through.
- *
- * <p><b>When a file is both oversized and of a forbidden type the expected answer is 413.</b>
- * Requirement 14 does not order the two checks; this codifies the service's documented choice to answer
- * the cheap, header-only question first.
- *
- * <p><b>Validates: Requirements 14.1, 14.2, 14.3</b>
- */
 @Tag("flowforge")
 class FileUploadLimitsPropertyTest {
 

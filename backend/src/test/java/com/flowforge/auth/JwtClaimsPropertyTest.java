@@ -16,15 +16,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Property 3: JWT Claims Match Issuing User.
- *
- * <p>For any registered, active user, the claims extracted from a generated access token
- * exactly identify that user: {@code sub} equals the user's ID, {@code email} equals the
- * user's email, and {@code role} equals the user's assigned role name.</p>
- *
- * <p><b>Validates: Requirements 2.1, 2.3</b></p>
- */
 @Tag("flowforge")
 class JwtClaimsPropertyTest {
 

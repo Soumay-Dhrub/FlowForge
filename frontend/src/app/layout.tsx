@@ -4,11 +4,6 @@ import { AuthProvider } from "@/context/AuthContext";
 import QueryProvider from "@/components/providers/QueryProvider";
 import "./globals.css";
 
-/**
- * Self-hosted by next/font: the files are downloaded at build time and served from our own origin, so
- * there is no request to Google on first paint and no layout shift while a fallback is swapped out.
- * `display: swap` keeps text readable during the brief window before the face is ready.
- */
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",

@@ -1,11 +1,5 @@
 package com.flowforge.task;
 
-/**
- * Lifecycle status of a {@link Task}.
- *
- * <p>Persisted as a string in {@code tasks.status}; the set of values mirrors the {@code CHECK}
- * constraint declared in {@code V1__initial_schema.sql}, which is the authoritative list.
- */
 public enum TaskStatus {
 
     /** Waiting on its assignee. The only status the engine creates a task in. */

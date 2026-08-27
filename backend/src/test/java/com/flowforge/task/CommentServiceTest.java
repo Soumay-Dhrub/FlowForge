@@ -33,13 +33,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Posting and reading comments on a request (Requirements 15.1, 15.2, 15.3).
- *
- * <p>The two things worth pinning down are the participant rule — on reading as much as on writing — and
- * chronological order, since "ordered by created_at ASC" is exactly the kind of detail a repository method
- * name can quietly get backwards.
- */
 class CommentServiceTest {
 
     private final Map<UUID, Comment> commentsById = new LinkedHashMap<>();

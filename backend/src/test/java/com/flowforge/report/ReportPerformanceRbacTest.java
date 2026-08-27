@@ -27,13 +27,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Role restrictions on the reporting endpoints, per the design's RBAC table (Requirements 3.1, 3.2).
- *
- * <p>The controller is taken from a context with {@code @EnableMethodSecurity}, so the bean under test is
- * the real method-security proxy and the {@code @PreAuthorize} expressions are genuinely evaluated rather
- * than skipped as they are under a plain standalone setup.
- */
 class ReportPerformanceRbacTest {
 
     private AnnotationConfigApplicationContext context;

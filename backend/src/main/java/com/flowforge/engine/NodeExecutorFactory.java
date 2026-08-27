@@ -11,25 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Resolves the {@link NodeExecutor} for a {@link NodeType} (Requirement 9.2).
- *
- * <p>Spring injects every {@code NodeExecutor} bean on the classpath and they are indexed by
- * {@link NodeExecutor#supportedType()} at construction. The engine then dispatches by lookup, so
- * neither the engine nor this factory has to know which executors exist.
- *
- * <h2>Failing loudly</h2>
- * <p>Two things are refused rather than tolerated:
- * <ul>
- *   <li><b>Two executors claiming one type</b> — rejected at construction, which fails application
- *       startup. Silently keeping one of them would make behaviour depend on bean ordering.</li>
- *   <li><b>A type with no executor</b> — {@link #executorFor(NodeType)} throws. Returning
- *       {@code null} or an empty no-op would leave an instance parked on a node forever with nothing
- *       in the logs, which is the worst possible failure mode for a workflow engine. The node type
- *       came from a published, validated graph, so a gap here is a server-side defect: it maps to
- *       500, not to a client error.</li>
- * </ul>
- */
 @Component
 @Slf4j
 public class NodeExecutorFactory {
@@ -59,13 +40,6 @@ public class NodeExecutorFactory {
                 index.size(), NodeType.values().length, index.keySet());
     }
 
-    /**
-     * The executor for a node type.
-     *
-     * @param type the node type to dispatch
-     * @return the executor registered for it
-     * @throws AppException 500 when no executor is registered for {@code type}
-     */
     public NodeExecutor executorFor(NodeType type) {
         NodeExecutor executor = type == null ? null : executorsByType.get(type);
         if (executor == null) {

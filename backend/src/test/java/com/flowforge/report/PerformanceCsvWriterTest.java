@@ -12,13 +12,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * CSV export (Requirement 21.5).
- *
- * <p>The escaping tests are the important ones. A workflow named {@code Travel, International} that is
- * written unquoted shifts every later column of its row, and the file still parses — so the failure shows
- * up as wrong numbers in somebody's spreadsheet rather than as an error.
- */
 class PerformanceCsvWriterTest {
 
     private static final UUID WORKFLOW_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");

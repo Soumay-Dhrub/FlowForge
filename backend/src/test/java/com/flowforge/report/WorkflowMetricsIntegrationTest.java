@@ -50,26 +50,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import com.flowforge.support.IntegrationTestBase;
 
-/**
- * Workflow performance metrics against a real PostgreSQL database (Requirements 21.1–21.5).
- *
- * <p>The unit tests hand the service entities built in memory, which cannot show whether the reporting
- * queries actually traverse the schema: the instance population is reached through
- * {@code instance → version → workflow}, the department filter through
- * {@code instance → initiator → department}, and the node samples through
- * {@code approval → task → node}. Each of those is a join that either exists in SQL or does not, and an
- * in-memory fixture agrees with itself either way. So this test seeds a workflow, runs requests through
- * the engine with genuine decisions, and asserts the computed numbers against the timestamps the database
- * actually holds — read back independently through the task and approval repositories.
- *
- * <p>One thing is seeded rather than driven: the {@code REJECTED} instance status. A rejection is recorded
- * as a real {@code approvals} row with {@code decision = REJECTED} through {@link TaskService}, but routing
- * a rejection to a terminal {@code REJECTED} status is Requirement 13.3's remaining half and does not exist
- * in the engine yet, so the test writes that status the way the engine will. The rejection rate is measured
- * over the statuses that are persisted, which is what the report reads.
- *
- * <p>Validates: Requirements 21.1, 21.2, 21.3, 21.4, 21.5.
- */
 class WorkflowMetricsIntegrationTest extends IntegrationTestBase {
 
     /** How long the slow stage is deliberately held, so the bottleneck is unambiguous. */
@@ -308,25 +288,6 @@ class WorkflowMetricsIntegrationTest extends IntegrationTestBase {
         return Map.of("label", label, "approverUserId", approverId.toString());
     }
 
-    /**
-     * Decide the open task an instance has at a node, so that the node's measured dwell is exactly
-     * {@code dwellMillis}.
-     *
-     * <p>This used to sleep for the dwell it wanted and let the clock produce it. That made the fast
-     * stage's dwell whatever a database round trip happened to cost, which is normally a few
-     * milliseconds and occasionally — with the whole suite running in parallel against containers —
-     * more than the 400 ms the slow stage was held for. The bottleneck assertion then picked the wrong
-     * node and the build failed for reasons having nothing to do with the code under test.
-     *
-     * <p>So the decision is still made through the real service, producing a real {@code approvals}
-     * row, and afterwards the task's {@code created_at} is back-dated so
-     * {@code decided_at - created_at} is precisely the intended interval. The metric is computed from
-     * exactly those two columns, so it is now deterministic and the test no longer waits.
-     *
-     * <p>The update is raw SQL because {@code created_at} is mapped {@code updatable = false} under
-     * {@code @CreationTimestamp} — JPA will not write it, and it should not, outside a test that is
-     * deliberately staging history.
-     */
     private void decide(UUID instanceId, UUID nodeId, Decision decision, String comment, long dwellMillis) {
         Task open = taskRepository.findByInstance_IdOrderByCreatedAtAsc(instanceId).stream()
                 .filter(task -> nodeId.equals(task.nodeId()))
@@ -345,14 +306,6 @@ class WorkflowMetricsIntegrationTest extends IntegrationTestBase {
                 open.getId());
     }
 
-    /**
-     * Persist the terminal {@code REJECTED} status for an instance whose decision was a rejection.
-     *
-     * <p>The rejection itself is a real {@code approvals} row written by {@link TaskService}. Routing that
-     * decision to a terminal status is the part of Requirement 13.3 the engine does not implement yet, so
-     * the test records the outcome the report is meant to measure rather than asserting against a status
-     * nothing writes.
-     */
     private void markRejected(UUID instanceId) {
         WorkflowInstance instance = instanceRepository.findById(instanceId).orElseThrow();
         instance.setStatus(InstanceStatus.REJECTED);

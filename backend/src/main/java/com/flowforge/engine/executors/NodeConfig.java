@@ -11,19 +11,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Typed reads of a node's {@code config_json}.
- *
- * <p>A node's configuration arrives as an untyped JSON map authored in the builder UI, so every
- * executor faces the same three cases for every key: absent, present and usable, present and
- * nonsense. This class makes the first an {@link Optional} and the third a loud failure, so an
- * executor's own code reads as the behaviour of the node rather than as JSON defence.
- *
- * <p>A malformed value is a definition defect, not a request problem: the graph was authored,
- * validated and published before any instance reached this node, so nobody submitting a request can
- * fix it. It therefore maps to 500 and names the node, the key and the offending value — enough for
- * the designer to find it on the canvas.
- */
 final class NodeConfig {
 
     private NodeConfig() {
@@ -43,12 +30,6 @@ final class NodeConfig {
         return value.isEmpty() ? Optional.empty() : Optional.of(value);
     }
 
-    /**
-     * A UUID value.
-     *
-     * @return the id, or empty when the key is absent
-     * @throws AppException 500 when the value is present but not a UUID
-     */
     static Optional<UUID> uuid(WorkflowNode node, String key) {
         Optional<String> value = string(node, key);
         if (value.isEmpty()) {
@@ -61,13 +42,6 @@ final class NodeConfig {
         }
     }
 
-    /**
-     * A list of non-blank strings. A single string is accepted as a one-element list, since a
-     * designer naming one recipient should not have to type an array.
-     *
-     * @return the values in the order authored, or an empty list when the key is absent
-     * @throws AppException 500 when the value is neither a string nor a collection of them
-     */
     static List<String> strings(WorkflowNode node, String key) {
         Object raw = raw(node, key);
         if (raw == null) {
@@ -92,16 +66,6 @@ final class NodeConfig {
         return string(node, key).map(List::of).orElseGet(List::of);
     }
 
-    /**
-     * A strictly positive whole number.
-     *
-     * <p>Zero and negatives are refused rather than read as "no value": a node that says its timeout
-     * is 0 minutes is misconfigured, and silently treating that as "no timeout" would hide it
-     * (Requirement 11.1).
-     *
-     * @return the number, or empty when the key is absent
-     * @throws AppException 500 when the value is not a positive whole number
-     */
     static Optional<Long> positiveLong(WorkflowNode node, String key) {
         Object raw = raw(node, key);
         if (raw == null) {

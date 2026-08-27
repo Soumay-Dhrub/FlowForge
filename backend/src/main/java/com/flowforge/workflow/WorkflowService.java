@@ -26,29 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Workflow definition management: creation, listing, draft saves and cloning.
- *
- * <p>The version lifecycle is split deliberately. This service only ever touches
- * <em>drafts</em>: a workflow is created with one empty unpublished version and every draft save
- * rewrites that version's graph in place, never allocating a new version number
- * (Requirements 6.4, 6.5). Validation of the graph's structure and the creation of immutable
- * published snapshots belong to {@code WorkflowVersionService} (task 14), so a designer can save an
- * incomplete canvas without being told about missing Start or End nodes.</p>
- *
- * <p>A published version is frozen. Draft saves aimed at one are refused with 409 rather than
- * silently forking a new version, because a running instance is bound to that exact graph
- * (Requirement 7.7).</p>
- *
- * <p>Node identifiers in a draft-save payload are treated as <em>payload-local correlation keys</em>
- * only: the canvas mints them client-side so edges in the same request can name their endpoints. The
- * persisted rows always get server-generated identifiers, which the response reports back. That
- * keeps a client from choosing primary keys, and it is what makes a clone genuinely independent of
- * its source.</p>
- *
- * <p>Authorization lives in {@link WorkflowController} via {@code @PreAuthorize} so the rules sit
- * next to the endpoints they guard, matching the RBAC table in the design.</p>
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -66,18 +43,6 @@ public class WorkflowService {
     private final WorkflowVersionMapper versionMapper;
     private final AuditLogService auditLogService;
 
-    /**
-     * Create a workflow together with its first, empty draft version (Requirement 6.4).
-     *
-     * <p>Both rows are written in one transaction, so a workflow can never exist without somewhere
-     * to author its graph. The draft is version 1, unpublished and not current — nothing can be
-     * instantiated from it until it is published.</p>
-     *
-     * @param request  validated creation payload
-     * @param actorId  the authenticated caller, recorded as the workflow's author
-     * @return the new workflow including its draft version
-     * @throws EntityNotFoundException 404 when the caller no longer exists
-     */
     @Transactional
     public WorkflowResponse createWorkflow(CreateWorkflowRequest request, UUID actorId) {
         User author = requireUser(actorId);
@@ -107,12 +72,6 @@ public class WorkflowService {
         return workflowMapper.toDetailResponse(workflow);
     }
 
-    /**
-     * List workflows newest first, optionally narrowed by a case-insensitive name fragment.
-     *
-     * @param nameQuery name fragment, or {@code null}/blank for everything
-     * @return workflow summaries without their version histories
-     */
     @Transactional(readOnly = true)
     public List<WorkflowResponse> listWorkflows(String nameQuery) {
         List<Workflow> workflows = StringUtils.hasText(nameQuery)
@@ -131,25 +90,6 @@ public class WorkflowService {
         return workflowMapper.toDetailResponse(requireWorkflow(workflowId));
     }
 
-    /**
-     * Replace a draft version's graph with the canvas state in the payload (Requirements 6.2, 6.5).
-     *
-     * <p>The whole graph is rewritten: relational {@code workflow_nodes} and {@code workflow_edges}
-     * rows plus the {@code graph_json} snapshot, which keeps the authored payload order. That order
-     * matters — the engine evaluates a Condition node's outgoing edges in it.</p>
-     *
-     * <p>An edge's {@code sourceNodeId}/{@code targetNodeId} name nodes <em>in the same payload</em>;
-     * they are resolved against it, never against previously stored nodes, so a save cannot leave an
-     * edge pointing at a node that no longer exists.</p>
-     *
-     * @param workflowId owning workflow, so a version id from another workflow cannot be used
-     * @param versionId  the draft version to rewrite
-     * @param request    the nodes and edges to store, in authored order
-     * @return the rewritten version, including its persisted graph
-     * @throws EntityNotFoundException     404 when the workflow or the version does not exist
-     * @throws AppException                409 when the version is published, and therefore immutable
-     * @throws WorkflowValidationException 422 when node ids repeat or an edge names an unknown node
-     */
     @Transactional
     public WorkflowVersionResponse saveDraft(UUID workflowId, UUID versionId, SaveDraftRequest request) {
         WorkflowVersion version = requireVersion(workflowId, versionId);
@@ -176,25 +116,6 @@ public class WorkflowService {
         return versionMapper.toResponse(saved);
     }
 
-    /**
-     * Clone a workflow into a brand-new draft definition (Requirements 8.1, 8.2).
-     *
-     * <p>The copy is deep: a new workflow, a single draft version numbered 1, and fresh node and
-     * edge rows with server-generated identifiers. Cloned edges are remapped onto the cloned nodes,
-     * so nothing in the copy references the source workflow's graph and editing either one leaves
-     * the other untouched.</p>
-     *
-     * <p>The source version is {@code request.sourceVersionId()} when supplied; otherwise the
-     * currently published version, falling back to the newest version of an as-yet unpublished
-     * workflow.</p>
-     *
-     * @param workflowId the workflow to copy
-     * @param request    optional source version and metadata overrides
-     * @param actorId    the authenticated caller, recorded as the clone's author
-     * @return the cloned workflow including its draft version
-     * @throws EntityNotFoundException     404 when the source workflow, version, or caller is absent
-     * @throws WorkflowValidationException 422 when a source edge has an endpoint outside its version
-     */
     @Transactional
     public WorkflowResponse cloneWorkflow(UUID workflowId, CloneWorkflowRequest request, UUID actorId) {
         CloneWorkflowRequest effective = request == null ? CloneWorkflowRequest.defaults() : request;
@@ -243,27 +164,6 @@ public class WorkflowService {
         return draft;
     }
 
-    /**
-     * Rewrite a draft's graph from a request payload.
-     *
-     * <p>Validation runs before anything is deleted, so a rejected payload leaves the stored draft
-     * exactly as it was. Old edges are removed before old nodes so the edge foreign keys stay
-     * satisfied at every point.</p>
-     *
-     * <h2>One deletion strategy, and it is JPA's</h2>
-     * <p>Emptying {@link WorkflowVersion#getEdges()} and {@link WorkflowVersion#getNodes()} is what
-     * removes the old rows: both collections are mapped with {@code orphanRemoval}, so the
-     * persistence context and the database stay in agreement about what is gone. Deleting the same
-     * rows with a repository query as well would break that agreement — the deleted rows would still
-     * be managed in the session, and the flush would then issue an update against a row that is on
-     * its way out, blanking its NOT NULL foreign keys. That is why the second save of a draft used to
-     * fail while the first one succeeded.</p>
-     *
-     * <p>Each stage is flushed deliberately. Edges reach the database before the nodes they point at,
-     * so no foreign key is ever left dangling mid-transaction; the old graph is gone before the new
-     * one is inserted; and the insert of the new graph is flushed before the caller is told the save
-     * worked.</p>
-     */
     private void replaceGraph(
             WorkflowVersion version,
             List<WorkflowNodeRequest> nodeRequests,
@@ -338,17 +238,6 @@ public class WorkflowService {
         }
     }
 
-    /**
-     * Deep-copy a source version's graph into a target draft, minting new identifiers and remapping
-     * every edge onto the copied nodes.
-     *
-     * <p>Package-private rather than private: {@code WorkflowVersionService} reuses it to seed the
-     * successor draft it opens after a publish, so both paths copy a graph exactly one way.</p>
-     *
-     * @param source the version to copy from
-     * @param target the draft to copy into
-     * @throws WorkflowValidationException 422 when a source edge has an endpoint outside its version
-     */
     void copyGraph(WorkflowVersion source, WorkflowVersion target) {
         Map<UUID, WorkflowNode> bySourceId = new LinkedHashMap<>();
         for (WorkflowNode sourceNode : nodeRepository.findByVersionIdOrderByCreatedAtAscIdAsc(source.getId())) {
@@ -390,17 +279,6 @@ public class WorkflowService {
         target.setGraphJson(buildGraphJson(target.getNodes(), target.getEdges()));
     }
 
-    /**
-     * Serialize a graph into the {@code {"nodes":[...],"edges":[...]}} shape stored in
-     * {@code graph_json}, preserving the order the nodes and edges were authored in.
-     *
-     * <p>Static and package-private so publishing produces byte-identical snapshots to draft saves
-     * (Requirement 7.6): one serializer, two callers.</p>
-     *
-     * @param nodes nodes in authored order
-     * @param edges edges in authored order
-     * @return the graph payload
-     */
     static Map<String, Object> buildGraphJson(List<WorkflowNode> nodes, List<WorkflowEdge> edges) {
         List<Map<String, Object>> nodePayload = new ArrayList<>();
         for (WorkflowNode node : nodes) {
