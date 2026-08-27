@@ -132,6 +132,19 @@ jobs:
             echo "frontend=flowforge-frontend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
+      # The two cache options below are load-bearing, for reasons that cost a red build to learn.
+      #
+      # scope: the gha backend defaults every build to the scope "buildkit". Both images are built
+      # in this one job, so with the default they share a single cache key — the second build
+      # overwrites the first's cache, and the two contend over the same reservation. A distinct
+      # scope per image is the documented arrangement for building more than one image.
+      #
+      # ignore-error: a failed cache *export* used to fail the whole job, which is the wrong
+      # trade. The image had already built successfully; only the upload of the layer cache
+      # failed, with "error writing layer blob: failed to reserve cache" — a known intermittent
+      # fault in the gha exporter (docker/build-push-action#1571). The cache is an optimisation,
+      # so losing it should cost time on the next run, never correctness on this one. Note this
+      # suppresses cache-export errors only; a genuine build failure still fails the job.
       - name: Build backend Docker image
         uses: docker/build-push-action@v5
         with:
@@ -139,8 +152,8 @@ jobs:
           file: ./backend/Dockerfile
           push: false
           tags: ${{ steps.tags.outputs.backend }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend,ignore-error=true
 
       # API_PROXY_TARGET is not passed here on purpose: the Dockerfile defaults it to
       # http://backend:8080, the compose service name. It is a BUILD-time value -- Next freezes rewrite
@@ -153,8 +166,8 @@ jobs:
           file: ./frontend/Dockerfile
           push: false
           tags: ${{ steps.tags.outputs.frontend }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend,ignore-error=true
 
   status-check:
     name: CI Status Check
