@@ -290,11 +290,15 @@ FlowForge/
 
 ---
 
-## Branch Protection
+## Contributing
 
-- All merges to `main` require a passing CI build (both `backend-test` and `frontend-test` jobs).
-- Direct pushes to `main` are disabled; open a pull request instead.
-- See `.github/workflows/ci.yml` for the full pipeline definition.
+- CI runs on every push to `main` and on every pull request: backend tests, backend integration
+  tests, frontend tests, and both Docker builds. See `.github/workflows/ci.yml`.
+- Work on a branch and open a pull request rather than pushing to `main`.
+
+`main` is not currently protected in GitHub's settings, so the second point is a convention rather
+than something enforced. Enable Settings → Branches → branch protection with `CI Status Check` as a
+required check to make it a rule.
 
 ## Deployment
 
